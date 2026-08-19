@@ -1,4 +1,4 @@
-﻿# Technology & UI Architecture
+# Technology & UI Architecture
 
 | Area | Observed implementation |
 |------|------------------------|
