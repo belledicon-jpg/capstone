@@ -102,8 +102,8 @@
     @apply text-slate-100;
   }
 
-  .dark .dashboard-card .text-slate-500,
-  .dark .dashboard-card .text-slate-400 {
+  /* Removed .text-slate-400 from this selector to avoid circular @apply (applying a utility inside a selector that matches that same utility). */
+  .dark .dashboard-card .text-slate-500 {
     @apply text-slate-400;
   }
 
