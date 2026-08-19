@@ -35,6 +35,28 @@
     --sidebar-border: 219 34% 24%;
     --sidebar-ring: 217 91% 60%;
   }
+
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 210 40% 98%;
+    --card: 222 40% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 40% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 30% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 30% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 30% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 25% 20%;
+    --input: 217 25% 20%;
+    --ring: 217 91% 60%;
+  }
 }
 
 @layer base {
@@ -71,6 +93,40 @@
 
 @layer utilities {
   .dashboard-card {
-    @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,31,61,0.05)];
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,31,61,0.05)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none;
+  }
+
+  .dark .dashboard-card .text-slate-900,
+  .dark .dashboard-card .text-slate-800,
+  .dark .dashboard-card .text-slate-700 {
+    @apply text-slate-100;
+  }
+
+  .dark .dashboard-card .text-slate-500,
+  .dark .dashboard-card .text-slate-400 {
+    @apply text-slate-400;
+  }
+
+  .dark .dashboard-card .border-slate-100,
+  .dark .dashboard-card .border-slate-200 {
+    @apply border-slate-800;
+  }
+
+  .dark .dashboard-card .bg-slate-50\/70 {
+    @apply bg-slate-800/70;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
