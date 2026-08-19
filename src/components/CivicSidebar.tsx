@@ -73,7 +73,7 @@ export const CivicSidebar = ({ open, collapsed, onClose }: CivicSidebarProps) =>
         open ? "translate-x-0" : "-translate-x-full",
       )}>
         <div className={cn("mb-7 flex items-center px-1", collapsed ? "lg:justify-center" : "gap-3")}>
-          <img src="/assets/civicsanity-mark.png" alt="CivicSanity" className="h-11 w-11 flex-none rounded-xl bg-white object-contain p-1.5 shadow-sm" />
+          <img src="/assets/civicsanity-mark.jpg" alt="CivicSanity" className="h-11 w-11 flex-none rounded-xl bg-white object-contain p-1.5 shadow-sm" />
           <div className={cn("min-w-0", collapsed && "lg:hidden")}>
             <p className="font-heading text-lg font-bold tracking-tight">CivicSanity</p>
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-blue-300">Public Health Office</p>
@@ -89,7 +89,7 @@ export const CivicSidebar = ({ open, collapsed, onClose }: CivicSidebarProps) =>
         <div className="mt-auto">
           <div className={cn("mb-4 rounded-2xl border border-blue-400/20 bg-blue-400/10 p-4", collapsed && "lg:flex lg:justify-center lg:p-2.5")}>
             <div className={cn("flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500 text-white", !collapsed && "mb-3")}><ShieldCheck className="h-5 w-5" /></div>
-            <div className={cn(collapsed && "lg:hidden")}><p className="text-sm font-semibold">System operational</p><p className="mt-1 text-xs leading-relaxed text-slate-400">All municipal data services are online.</p></div>
+            <div className={cn(collapsed && "lg:hidden")}><p className="text-sm font-semibold">System operational</p><p className="mt-1 text-xs leading-relaxed text-slate-400">All municipal data s[...]
           </div>
           <nav className="space-y-1" aria-label="Support navigation">
             {secondaryLinks.map((link) => <NavLink key={link.label} {...link} collapsed={collapsed} active={isActive(link.to)} onClick={onClose} />)}
