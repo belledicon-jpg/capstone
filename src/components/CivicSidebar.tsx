@@ -36,14 +36,23 @@ const secondaryLinks = [
   { label: "Help center", icon: HelpCircle, to: "/#help" },
 ];
 
-const NavLink = ({ label, icon: Icon, to, collapsed, active, onClick }: {
+type NavLinkProps = {
   label: string;
   icon: typeof LayoutDashboard;
   to: string;
   collapsed: boolean;
   active?: boolean;
   onClick: () => void;
-}) => (
+};
+
+const NavLink = ({
+  label,
+  icon: Icon,
+  to,
+  collapsed,
+  active,
+  onClick,
+}: NavLinkProps) => (
   <Link
     to={to}
     title={collapsed ? label : undefined}
@@ -52,50 +61,146 @@ const NavLink = ({ label, icon: Icon, to, collapsed, active, onClick }: {
     className={cn(
       "group flex w-full items-center rounded-xl py-2.5 text-sm font-medium transition-colors",
       collapsed ? "justify-center px-2" : "gap-3 px-3",
-      active ? "bg-blue-600 text-white shadow-sm shadow-blue-950/20" : "text-slate-300 hover:bg-white/10 hover:text-white",
+      active
+        ? "bg-blue-600 text-white shadow-sm shadow-blue-950/20"
+        : "text-slate-300 hover:bg-white/10 hover:text-white",
     )}
   >
-    <Icon className="h-[18px] w-[18px] flex-none" aria-hidden="true" />
+    <Icon
+      className="h-[18px] w-[18px] flex-none"
+      aria-hidden="true"
+    />
     {!collapsed && <span>{label}</span>}
   </Link>
 );
 
-export const CivicSidebar = ({ open, collapsed, onClose }: CivicSidebarProps) => {
+export const CivicSidebar = ({
+  open,
+  collapsed,
+  onClose,
+}: CivicSidebarProps) => {
   const { pathname, hash } = useLocation();
-  const isActive = (to: string) => to === "/" ? pathname === "/" && !hash : `${pathname}${hash}` === to;
+
+  const isActive = (to: string) =>
+    to === "/"
+      ? pathname === "/" && !hash
+      : `${pathname}${hash}` === to;
 
   return (
     <>
-      {open && <button aria-label="Close navigation" className="fixed inset-0 z-30 bg-slate-950/50 backdrop-blur-sm lg:hidden" onClick={onClose} type="button" />}
-      <aside className={cn(
-        "fixed inset-y-0 left-0 z-40 flex flex-col bg-[#0d1b34] px-4 pb-5 pt-4 text-white shadow-2xl transition-[width,transform] duration-300 lg:translate-x-0",
-        collapsed ? "w-[272px] lg:w-[88px]" : "w-[272px]",
-        open ? "translate-x-0" : "-translate-x-full",
-      )}>
-        <div className={cn("mb-7 flex items-center px-1", collapsed ? "lg:justify-center" : "gap-3")}>
-          <img src="/assets/civicsanity-mark.jpg" alt="CivicSanity" className="h-11 w-11 flex-none rounded-xl bg-white object-contain p-1.5 shadow-sm" />
+      {open && (
+        <button
+          aria-label="Close navigation"
+          className="fixed inset-0 z-30 bg-slate-950/50 backdrop-blur-sm lg:hidden"
+          onClick={onClose}
+          type="button"
+        />
+      )}
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 flex flex-col bg-[#0d1b34] px-4 pb-5 pt-4 text-white shadow-2xl transition-[width,transform] duration-300 lg:translate-x-0",
+          collapsed ? "w-[272px] lg:w-[88px]" : "w-[272px]",
+          open ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        {/* Brand */}
+        <div
+          className={cn(
+            "mb-7 flex items-center px-1",
+            collapsed ? "lg:justify-center" : "gap-3",
+          )}
+        >
+          <img
+            src="/assets/civicsanity-mark.jpg"
+            alt="CivicSanity"
+            className="h-11 w-11 flex-none rounded-xl bg-white object-contain p-1.5 shadow-sm"
+          />
+
           <div className={cn("min-w-0", collapsed && "lg:hidden")}>
-            <p className="font-heading text-lg font-bold tracking-tight">CivicSanity</p>
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-blue-300">Public Health Office</p>
+            <p className="font-heading text-lg font-bold tracking-tight">
+              CivicSanity
+            </p>
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-blue-300">
+              Public Health Office
+            </p>
           </div>
-          <button type="button" aria-label="Close menu" onClick={onClose} className="ml-auto rounded-lg p-2 text-slate-300 hover:bg-white/10 lg:hidden"><X className="h-5 w-5" /></button>
+
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={onClose}
+            className="ml-auto rounded-lg p-2 text-slate-300 hover:bg-white/10 lg:hidden"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        <div className={cn("mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", collapsed && "lg:sr-only")}>Workspace</div>
+        {/* Workspace */}
+        <div
+          className={cn(
+            "mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500",
+            collapsed && "lg:sr-only",
+          )}
+        >
+          Workspace
+        </div>
+
         <nav className="space-y-1" aria-label="Main navigation">
-          {primaryLinks.map((link) => <NavLink key={link.label} {...link} collapsed={collapsed} active={isActive(link.to)} onClick={onClose} />)}
+          {primaryLinks.map((link) => (
+            <NavLink
+              key={link.label}
+              {...link}
+              collapsed={collapsed}
+              active={isActive(link.to)}
+              onClick={onClose}
+            />
+          ))}
         </nav>
 
+        {/* Bottom section */}
         <div className="mt-auto">
-          <div className={cn("mb-4 rounded-2xl border border-blue-400/20 bg-blue-400/10 p-4", collapsed && "lg:flex lg:justify-center lg:p-2.5")}>
-            <div className={cn("flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500 text-white", !collapsed && "mb-3")}><ShieldCheck className="h-5 w-5" /></div>
+          {/* System status */}
+          <div
+            className={cn(
+              "mb-4 rounded-2xl border border-blue-400/20 bg-blue-400/10 p-4",
+              collapsed && "lg:flex lg:justify-center lg:p-2.5",
+            )}
+          >
+            <div
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500 text-white",
+                !collapsed && "mb-3",
+              )}
+            >
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+
             <div className={cn(collapsed && "lg:hidden")}>
-              <p className="text-sm font-semibold">System operational</p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-400">All municipal data synced.</p>
+              <p className="text-sm font-semibold">
+                System operational
+              </p>
+
+              <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                All municipal data systems are operating normally.
+              </p>
             </div>
           </div>
-          <nav className="space-y-1" aria-label="Support navigation">
-            {secondaryLinks.map((link) => <NavLink key={link.label} {...link} collapsed={collapsed} active={isActive(link.to)} onClick={onClose} />)}
+
+          {/* Support navigation */}
+          <nav
+            className="space-y-1"
+            aria-label="Support navigation"
+          >
+            {secondaryLinks.map((link) => (
+              <NavLink
+                key={link.label}
+                {...link}
+                collapsed={collapsed}
+                active={isActive(link.to)}
+                onClick={onClose}
+              />
+            ))}
           </nav>
         </div>
       </aside>
