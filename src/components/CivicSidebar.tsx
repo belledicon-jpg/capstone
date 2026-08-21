@@ -23,7 +23,7 @@ type CivicSidebarProps = {
 
 const primaryLinks = [
   { label: "Overview", icon: LayoutDashboard, to: "/" },
-  { label: "Sanitation services", icon: Trash2, to: "/#services" },
+  { label: "Sanitation Services", icon: Trash2, to: "/sanitation" },
   { label: "Health inspections", icon: ClipboardCheck, to: "/#inspections" },
   { label: "Facilities", icon: Building2, to: "/#facilities" },
   { label: "Community reports", icon: Users, to: "/#community" },
