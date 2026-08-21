@@ -113,13 +113,13 @@ export const CivicSidebar = ({
         >
           <img
             src="/assets/logo.jpg"
-            alt="GovServer"
+            alt="GovServe"
             className="h-11 w-11 flex-none rounded-xl bg-white object-contain p-1.5 shadow-sm"
           />
 
           <div className={cn("min-w-0", collapsed && "lg:hidden")}>
             <p className="font-heading text-lg font-bold tracking-tight">
-              GovServer
+              GovServe
             </p>
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-blue-300">
               Public Health Office

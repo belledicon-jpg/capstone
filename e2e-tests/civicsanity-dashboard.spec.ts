@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("uses the GovServer dashboard shell and assistant", async ({ page }) => {
+test("uses the GovServe dashboard shell and assistant", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "Health & sanitation overview" })).toBeVisible();
@@ -20,7 +20,7 @@ test("uses the GovServer dashboard shell and assistant", async ({ page }) => {
   await expect(themeToggle).not.toHaveAttribute("aria-label", initialThemeLabel ?? "");
 
   await page.getByRole("button", { name: "Open AI assistant" }).click();
-  await page.getByLabel("Ask GovServer").fill("How is water quality?");
+  await page.getByLabel("Ask GovServe").fill("How is water quality?");
   await page.getByRole("button", { name: "Send message" }).click();
-  await expect(page.getByLabel("GovServer AI assistant")).toContainText("Water quality is currently 96.8%");
+  await expect(page.getByLabel("GovServe AI assistant")).toContainText("Water quality is currently 96.8%");
 });
