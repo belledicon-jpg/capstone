@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:4000';
+const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 
 export async function apiSendOTP(email: string) {
   const res = await fetch(`${API_BASE}/api/auth/send-otp`, {
