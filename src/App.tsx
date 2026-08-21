@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
+import SanitationServices from "@/pages/SanitationServices";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,7 @@ const App = () => (
           <Routes>
             <Route element={<AppLayout />}>
               <Route path="/" element={<Index />} />
+              <Route path="/sanitation-services" element={<SanitationServices />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
