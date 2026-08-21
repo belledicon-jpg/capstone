@@ -4,13 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { PageTransition, ScrollReveal } from "@/components/animations";
 import { Button } from "@/components/ui/button";
 import InspectionCard from "@/components/inspections/InspectionCard";
-import mockInspections from "@/data/mockInspections";
+import { useInspections } from "@/hooks/useInspections";
 
 const InspectionsIndex = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const { inspections } = useInspections();
 
-  const list = mockInspections.filter((i) =>
+  const list = inspections.filter((i: any) =>
     i.id.toLowerCase().includes(query.toLowerCase()) ||
     i.facility.name.toLowerCase().includes(query.toLowerCase()),
   );
@@ -18,7 +19,7 @@ const InspectionsIndex = () => {
   const exportCSV = () => {
     const rows = [
       ["ID", "Facility", "Type", "Date", "Inspector", "Status", "Score", "Risk"],
-      ...list.map((i) => [i.id, i.facility.name, i.type, i.date, i.inspector, i.status, i.score ?? "", i.riskLevel ?? "" ]),
+      ...list.map((i: any) => [i.id, i.facility.name, i.type, i.date, i.inspector, i.status, i.score ?? "", i.riskLevel ?? "" ]),
     ];
     const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -53,7 +54,7 @@ const InspectionsIndex = () => {
           </div>
 
           <div className="grid gap-3">
-            {list.map((ins) => (
+            {list.map((ins: any) => (
               <div key={ins.id} onClick={() => navigate(`/inspections/${ins.id}`)}>
                 <InspectionCard inspection={ins} />
               </div>

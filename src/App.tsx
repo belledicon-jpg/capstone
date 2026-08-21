@@ -11,6 +11,7 @@ import NotFound from "@/pages/NotFound";
 import SanitationServices from "@/pages/SanitationServices";
 import InspectionsIndex from "@/pages/Inspections/Index";
 import InspectionDetails from "@/pages/Inspections/Details";
+import InspectionsNew from "@/pages/Inspections/New";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/sanitation-services" element={<SanitationServices />} />
               <Route path="/inspections" element={<InspectionsIndex />} />
+              <Route path="/inspections/new" element={<InspectionsNew />} />
               <Route path="/inspections/:id" element={<InspectionDetails />} />
             </Route>
             <Route path="*" element={<NotFound />} />

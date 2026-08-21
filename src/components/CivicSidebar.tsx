@@ -24,7 +24,7 @@ type CivicSidebarProps = {
 const primaryLinks = [
   { label: "Overview", icon: LayoutDashboard, to: "/" },
   { label: "Sanitation Services", icon: Trash2, to: "/sanitation-services" },
-  { label: "Health inspections", icon: ClipboardCheck, to: "/#inspections" },
+  { label: "Health inspections", icon: ClipboardCheck, to: "/inspections" },
   { label: "Facilities", icon: Building2, to: "/#facilities" },
   { label: "Community reports", icon: Users, to: "/#community" },
   { label: "Analytics", icon: BarChart3, to: "/#analytics" },
@@ -104,106 +104,3 @@ export const CivicSidebar = ({
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        {/* Brand */}
-        <div
-          className={cn(
-            "mb-7 flex items-center px-1",
-            collapsed ? "lg:justify-center" : "gap-3",
-          )}
-        >
-          <img
-            src="/assets/logo.jpg"
-            alt="GovServe"
-            className="h-11 w-11 flex-none rounded-xl bg-white object-contain p-1.5 shadow-sm"
-          />
-
-          <div className={cn("min-w-0", collapsed && "lg:hidden")}>
-            <p className="font-heading text-lg font-bold tracking-tight">
-              GovServe
-            </p>
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-blue-300">
-              Public Health Office
-            </p>
-          </div>
-
-          <button
-            type="button"
-            aria-label="Close menu"
-            onClick={onClose}
-            className="ml-auto rounded-lg p-2 text-slate-300 hover:bg-white/10 lg:hidden"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Workspace */}
-        <div
-          className={cn(
-            "mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500",
-            collapsed && "lg:sr-only",
-          )}
-        >
-          Workspace
-        </div>
-
-        <nav className="space-y-1" aria-label="Main navigation">
-          {primaryLinks.map((link) => (
-            <NavLink
-              key={link.label}
-              {...link}
-              collapsed={collapsed}
-              active={isActive(link.to)}
-              onClick={onClose}
-            />
-          ))}
-        </nav>
-
-        {/* Bottom section */}
-        <div className="mt-auto">
-          {/* System status */}
-          <div
-            className={cn(
-              "mb-4 rounded-2xl border border-blue-400/20 bg-blue-400/10 p-4",
-              collapsed && "lg:flex lg:justify-center lg:p-2.5",
-            )}
-          >
-            <div
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500 text-white",
-                !collapsed && "mb-3",
-              )}
-            >
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-
-            <div className={cn(collapsed && "lg:hidden")}>
-              <p className="text-sm font-semibold">
-                System operational
-              </p>
-
-              <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                All municipal data systems are operating normally.
-              </p>
-            </div>
-          </div>
-
-          {/* Support navigation */}
-          <nav
-            className="space-y-1"
-            aria-label="Support navigation"
-          >
-            {secondaryLinks.map((link) => (
-              <NavLink
-                key={link.label}
-                {...link}
-                collapsed={collapsed}
-                active={isActive(link.to)}
-                onClick={onClose}
-              />
-            ))}
-          </nav>
-        </div>
-      </aside>
-    </>
-  );
-};

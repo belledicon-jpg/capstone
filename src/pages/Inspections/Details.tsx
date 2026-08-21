@@ -1,17 +1,16 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useParams } from "react-router-dom";
 
 import { PageTransition, ScrollReveal } from "@/components/animations";
-import mockInspections from "@/data/mockInspections";
+import { useInspections } from "@/hooks/useInspections";
 import ViolationsList from "@/components/inspections/ViolationsList";
 import { Button } from "@/components/ui/button";
 
 const InspectionDetails = () => {
   const { id } = useParams();
-  const inspection = useMemo(() => mockInspections.find((i) => i.id === id), [id]);
+  const { inspections, updateInspection } = useInspections();
 
-  const [actions, setActions] = useState(inspection?.correctiveActions ?? []);
-  const [followUp, setFollowUp] = useState(inspection?.followUp ?? null);
+  const inspection = useMemo(() => inspections.find((i: any) => i.id === id), [inspections, id]);
 
   if (!inspection) {
     return (
@@ -29,12 +28,23 @@ const InspectionDetails = () => {
       deadline: null,
       status: "Pending",
     };
-    setActions((s) => [newAction, ...s]);
+
+    const updated = { ...inspection, correctiveActions: [newAction, ...(inspection.correctiveActions || [])] };
+    updateInspection(updated);
   };
 
   const markActionComplete = (actionId: string) => {
-    setActions((s) => s.map((a: any) => (a.id === actionId ? { ...a, status: "Completed" } : a)));
+    const updated = {
+      ...inspection,
+      correctiveActions: (inspection.correctiveActions || []).map((a: any) =>
+        a.id === actionId ? { ...a, status: "Completed" } : a,
+      ),
+    };
+    updateInspection(updated);
   };
+
+  const actions = inspection.correctiveActions || [];
+  const followUp = inspection.followUp;
 
   return (
     <PageTransition>
