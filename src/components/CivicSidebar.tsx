@@ -89,7 +89,10 @@ export const CivicSidebar = ({ open, collapsed, onClose }: CivicSidebarProps) =>
         <div className="mt-auto">
           <div className={cn("mb-4 rounded-2xl border border-blue-400/20 bg-blue-400/10 p-4", collapsed && "lg:flex lg:justify-center lg:p-2.5")}>
             <div className={cn("flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500 text-white", !collapsed && "mb-3")}><ShieldCheck className="h-5 w-5" /></div>
-            <div className={cn(collapsed && "lg:hidden")}><p className="text-sm font-semibold">System operational</p><p className="mt-1 text-xs leading-relaxed text-slate-400">All municipal data s[...]
+            <div className={cn(collapsed && "lg:hidden")}>
+              <p className="text-sm font-semibold">System operational</p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-400">All municipal data synced.</p>
+            </div>
           </div>
           <nav className="space-y-1" aria-label="Support navigation">
             {secondaryLinks.map((link) => <NavLink key={link.label} {...link} collapsed={collapsed} active={isActive(link.to)} onClick={onClose} />)}
