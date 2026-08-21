@@ -104,3 +104,66 @@ export const CivicSidebar = ({
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
+        <div className="flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded bg-white/10 flex items-center justify-center">GS</div>
+            {!collapsed && <span className="font-semibold">GovServe</span>}
+          </Link>
+
+          <div className="lg:hidden">
+            <button
+              aria-label="Close navigation"
+              className="rounded p-2 text-white/80 hover:bg-white/10"
+              onClick={onClose}
+              type="button"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <nav className="mt-6 flex-1 overflow-auto">
+          <div className="space-y-2">
+            {primaryLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                label={link.label}
+                icon={link.icon}
+                to={link.to}
+                collapsed={collapsed}
+                active={isActive(link.to)}
+                onClick={() => {
+                  if (open) onClose();
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="mt-6 border-t border-white/10 pt-4">
+            <div className="space-y-2">
+              {secondaryLinks.map((link) => (
+                <NavLink
+                  key={link.to}
+                  label={link.label}
+                  icon={link.icon}
+                  to={link.to}
+                  collapsed={collapsed}
+                  active={isActive(link.to)}
+                  onClick={() => {
+                    if (open) onClose();
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </nav>
+
+        <div className="mt-auto px-1">
+          {!collapsed && (
+            <div className="mt-4 text-sm text-slate-300">Version 0.1</div>
+          )}
+        </div>
+      </aside>
+    </>
+  );
+};
