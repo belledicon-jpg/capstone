@@ -1,0 +1,72 @@
+const mockInspections = [
+  {
+    id: "HI-2026-00421",
+    type: "Routine",
+    date: "2026-08-21",
+    inspector: "Maria Santos",
+    status: "Conditional Pass",
+    facility: {
+      name: "Barangay Community Kitchen",
+      address: "123 Barangay St.",
+      type: "Community Kitchen",
+      owner: "Barangay Council",
+      contact: "0917-000-1111",
+    },
+    findings: [
+      { id: "F1", area: "Food storage", check: "Temperature control", result: "Compliant" },
+      { id: "F2", area: "Handwashing", check: "Availability", result: "Compliant" },
+      { id: "F3", area: "Waste disposal", check: "Collection", result: "Minor violation" },
+    ],
+    violations: [
+      {
+        id: "V1",
+        category: "Pest control",
+        description: "Rodent droppings found near storage area",
+        severity: "Major",
+        location: "Storage room",
+        evidence: [],
+        regulation: "Food Safety Act §12",
+      },
+      {
+        id: "V2",
+        category: "Waste disposal",
+        description: "Improper segregation of wet and dry waste",
+        severity: "Minor",
+        location: "Kitchen",
+        evidence: [],
+        regulation: "Sanitation Code §4",
+      },
+    ],
+    correctiveActions: [
+      { id: "CA1", action: "Improve waste-bin maintenance", responsible: "Kitchen Manager", deadline: "2026-09-05", status: "Pending" },
+      { id: "CA2", action: "Schedule pest-control treatment", responsible: "Barangay Office", deadline: "2026-09-05", status: "Pending" },
+    ],
+    followUp: { date: "2026-09-08", notes: "Verify pest control report and updated cleaning schedule", resolved: false },
+    score: 84,
+    riskLevel: "Medium",
+    audit: { createdBy: "maria", createdAt: "2026-08-21T09:00:00Z" },
+  },
+  {
+    id: "HI-2026-00422",
+    type: "Routine",
+    date: "2026-08-20",
+    inspector: "Juan Dela Cruz",
+    status: "Pass",
+    facility: {
+      name: "Central Community Market",
+      address: "Market Rd.",
+      type: "Market",
+      owner: "Market Cooperative",
+      contact: "0917-222-3333",
+    },
+    findings: [],
+    violations: [],
+    correctiveActions: [],
+    followUp: null,
+    score: 95,
+    riskLevel: "Low",
+    audit: { createdBy: "juan", createdAt: "2026-08-20T10:00:00Z" },
+  },
+];
+
+export default mockInspections;
