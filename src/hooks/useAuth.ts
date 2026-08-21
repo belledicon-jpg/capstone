@@ -1,5 +1,6 @@
 import * as React from "react";
 import * as api from "@/lib/api/auth";
+import { Navigate } from "react-router-dom";
 
 const AuthContext = React.createContext<any>(null);
 
@@ -59,15 +60,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = React.useMemo(() => ({ user, loading, sendOTP, verifyOTP, register, login, logout }), [user, loading]);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  // Avoid JSX in .ts file by using React.createElement
+  return React.createElement(AuthContext.Provider, { value }, children) as any;
 }
 
-import { Navigate } from "react-router-dom";
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const ctx = React.useContext(AuthContext);
   if (ctx?.loading) return null; // or a loading spinner
-  if (!ctx?.user) return <Navigate to="/login" replace />;
-  return <>{children}</>;
+  if (!ctx?.user) return React.createElement(Navigate, { to: "/login", replace: true });
+  return React.createElement(React.Fragment, null, children);
 }
 
 export function useAuth() {
