@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const db = require('./db');
 require('dotenv').config();
 
 const app = express();
@@ -36,10 +37,6 @@ const storage = multer.diskStorage({
   },
 });
 const upload = multer({ storage });
-
-// In-memory stores (for dev only)
-const users = new Map(); // email -> { email, name, passwordHash, verified, avatar }
-const otps = new Map(); // email -> { code, expiresAt }
 
 let transporterPromise = null;
 
@@ -82,7 +79,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
-  otps.set(email, { code, expiresAt });
+  db.setOTP(email, code, expiresAt);
 
   try {
     const transporter = await getTransporter();
@@ -105,12 +102,12 @@ app.post('/api/auth/send-otp', async (req, res) => {
 app.post('/api/auth/verify-otp', (req, res) => {
   const { email, code } = req.body || {};
   if (!email || !code) return res.status(400).json({ error: 'Email and code required' });
-  const rec = otps.get(email);
+  const rec = db.getOTP(email);
   if (!rec) return res.status(400).json({ error: 'No OTP found' });
   if (Date.now() > rec.expiresAt) return res.status(400).json({ error: 'OTP expired' });
   if (rec.code !== code) return res.status(400).json({ error: 'Invalid code' });
   // OTP verified - remove it
-  otps.delete(email);
+  db.deleteOTP(email);
   return res.json({ ok: true });
 });
 
@@ -118,24 +115,24 @@ app.post('/api/auth/register', async (req, res) => {
   const { email, name, password, code } = req.body || {};
   if (!email || !name || !password || !code) return res.status(400).json({ error: 'email, name, password, code required' });
   // verify OTP
-  const rec = otps.get(email);
+  const rec = db.getOTP(email);
   if (!rec || rec.code !== code || Date.now() > rec.expiresAt) return res.status(400).json({ error: 'Invalid or expired OTP' });
 
-  if (users.has(email)) return res.status(400).json({ error: 'User already exists' });
+  const existing = db.getUser(email);
+  if (existing) return res.status(400).json({ error: 'User already exists' });
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const user = { email, name, passwordHash, verified: true, createdAt: new Date().toISOString(), avatar: null, active: true };
-  users.set(email, user);
-  otps.delete(email);
+  const user = db.createUser({ email, name, passwordHash });
+  db.deleteOTP(email);
 
   setSession(res, email);
-  return res.json({ ok: true, user: { email, name, avatar: null } });
+  return res.json({ ok: true, user: { email: user.email, name: user.name, avatar: user.avatar } });
 });
 
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
-  const user = users.get(email);
+  const user = db.getUser(email);
   if (!user) return res.status(400).json({ error: 'Invalid credentials' });
   if (!user.active) return res.status(400).json({ error: 'Account inactive' });
   const ok = await bcrypt.compare(password, user.passwordHash);
@@ -152,7 +149,7 @@ app.post('/api/auth/logout', (req, res) => {
 app.get('/api/auth/session', (req, res) => {
   const { session } = req.cookies || {};
   if (!session) return res.json({ ok: true, user: null });
-  const user = users.get(session);
+  const user = db.getUser(session);
   if (!user) return res.json({ ok: true, user: null });
   return res.json({ ok: true, user: { email: user.email, name: user.name, avatar: user.avatar } });
 });
@@ -161,7 +158,7 @@ app.get('/api/auth/session', (req, res) => {
 app.get('/api/user', (req, res) => {
   const { session } = req.cookies || {};
   if (!session) return res.status(401).json({ error: 'Not authenticated' });
-  const user = users.get(session);
+  const user = db.getUser(session);
   if (!user) return res.status(404).json({ error: 'User not found' });
   res.json({ ok: true, user: { email: user.email, name: user.name, avatar: user.avatar, active: user.active } });
 });
@@ -169,47 +166,45 @@ app.get('/api/user', (req, res) => {
 app.patch('/api/user', (req, res) => {
   const { session } = req.cookies || {};
   if (!session) return res.status(401).json({ error: 'Not authenticated' });
-  const user = users.get(session);
+  const user = db.getUser(session);
   if (!user) return res.status(404).json({ error: 'User not found' });
   const { name } = req.body || {};
-  if (typeof name === 'string') user.name = name;
-  users.set(session, user);
-  res.json({ ok: true, user: { email: user.email, name: user.name, avatar: user.avatar } });
+  if (typeof name === 'string') db.updateUser(session, { name });
+  const updated = db.getUser(session);
+  res.json({ ok: true, user: { email: updated.email, name: updated.name, avatar: updated.avatar } });
 });
 
 app.post('/api/user/avatar', upload.single('avatar'), (req, res) => {
   const { session } = req.cookies || {};
   if (!session) return res.status(401).json({ error: 'Not authenticated' });
-  const user = users.get(session);
+  const user = db.getUser(session);
   if (!user) return res.status(404).json({ error: 'User not found' });
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   const url = `/uploads/${req.file.filename}`;
-  user.avatar = url;
-  users.set(session, user);
+  db.updateUser(session, { avatar: url });
   res.json({ ok: true, url });
 });
 
 app.post('/api/user/password', async (req, res) => {
   const { session } = req.cookies || {};
   if (!session) return res.status(401).json({ error: 'Not authenticated' });
-  const user = users.get(session);
+  const user = db.getUser(session);
   if (!user) return res.status(404).json({ error: 'User not found' });
   const { currentPassword, newPassword } = req.body || {};
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'currentPassword and newPassword required' });
   const ok = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!ok) return res.status(400).json({ error: 'Current password incorrect' });
-  user.passwordHash = await bcrypt.hash(newPassword, 10);
-  users.set(session, user);
+  const newHash = await bcrypt.hash(newPassword, 10);
+  db.changePassword(session, newHash);
   res.json({ ok: true });
 });
 
 app.post('/api/user/deactivate', (req, res) => {
   const { session } = req.cookies || {};
   if (!session) return res.status(401).json({ error: 'Not authenticated' });
-  const user = users.get(session);
+  const user = db.getUser(session);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  user.active = false;
-  users.set(session, user);
+  db.deactivateUser(session);
   clearSession(res);
   res.json({ ok: true });
 });
@@ -217,9 +212,9 @@ app.post('/api/user/deactivate', (req, res) => {
 app.post('/api/user/delete', (req, res) => {
   const { session } = req.cookies || {};
   if (!session) return res.status(401).json({ error: 'Not authenticated' });
-  const user = users.get(session);
+  const user = db.getUser(session);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  users.delete(session);
+  db.deleteUser(session);
   clearSession(res);
   res.json({ ok: true });
 });
