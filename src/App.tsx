@@ -27,15 +27,19 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
+              {/* Routes that use the main application layout */}
               <Route element={<AppLayout />}>
                 <Route path="/" element={<RequireAuth><Index /></RequireAuth>} />
                 <Route path="/sanitation-services" element={<RequireAuth><SanitationServices /></RequireAuth>} />
                 <Route path="/inspections" element={<RequireAuth><InspectionsIndex /></RequireAuth>} />
                 <Route path="/inspections/new" element={<RequireAuth><InspectionsNew /></RequireAuth>} />
                 <Route path="/inspections/:id" element={<RequireAuth><InspectionDetails /></RequireAuth>} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
               </Route>
+
+              {/* Public / standalone routes (no AppLayout) */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
