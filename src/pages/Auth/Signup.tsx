@@ -14,16 +14,18 @@ const Signup = () => {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [devCode, setDevCode] = useState<string | null>(null);
+  const [devPreviewUrl, setDevPreviewUrl] = useState<string | null>(null);
 
   const handleSend = async (e: any) => {
     e?.preventDefault();
     setError(null);
     if (!email) return setError("Email required");
     try {
-      const code = await sendOTP(email);
-      // for dev, surface the code so developer can test without email
-      setDevCode(code);
+      const res = await sendOTP(email);
+      // in dev the server may return previewUrl (Ethereal)
+      if (res?.previewUrl) {
+        setDevPreviewUrl(res.previewUrl);
+      }
       setStep("verify");
     } catch (err: any) {
       setError(err.message || "Failed to send OTP");
@@ -34,8 +36,8 @@ const Signup = () => {
     e?.preventDefault();
     setError(null);
     try {
-      const ok = await verifyOTP(email, otp);
-      if (!ok) return setError("Invalid or expired code");
+      const res = await verifyOTP(email, otp);
+      if (!res?.ok) return setError(res?.error || "Invalid or expired code");
       setStep("account");
     } catch (err: any) {
       setError(err.message || "Verification failed");
@@ -47,7 +49,8 @@ const Signup = () => {
     setError(null);
     if (!name || !password) return setError("Name and password required");
     try {
-      await register({ email, name, password, verified: true });
+      const res = await register({ email, name, password, code: otp });
+      if (!res?.ok) return setError(res?.error || "Failed to create account");
       navigate("/");
     } catch (err: any) {
       setError(err.message || "Failed to create account");
@@ -84,8 +87,8 @@ const Signup = () => {
                 <label className="block text-sm font-medium text-slate-700">Verification code</label>
                 <input value={otp} onChange={(e) => setOtp(e.target.value)} className="mt-1 w-full rounded border px-3 py-2" required />
               </div>
-              {devCode && (
-                <div className="text-xs text-slate-400">(dev) OTP: {devCode}</div>
+              {devPreviewUrl && (
+                <div className="text-xs text-slate-400">(dev) Preview email: <a href={devPreviewUrl} target="_blank" rel="noreferrer" className="underline">Open</a></div>
               )}
               {error && <div className="text-sm text-red-600">{error}</div>}
               <div className="flex justify-between items-center">
