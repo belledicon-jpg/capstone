@@ -4,6 +4,9 @@ const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
 require('dotenv').config();
 
 const app = express();
@@ -15,8 +18,27 @@ const PORT = process.env.PORT || 4000;
 // allow the frontend dev server to send requests with credentials
 app.use(cors({ origin: true, credentials: true }));
 
+// ensure uploads dir exists
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+// serve uploaded files
+app.use('/uploads', express.static(UPLOADS_DIR));
+
+// Multer setup
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, UPLOADS_DIR);
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname);
+    cb(null, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`);
+  },
+});
+const upload = multer({ storage });
+
 // In-memory stores (for dev only)
-const users = new Map(); // email -> { email, name, passwordHash, verified }
+const users = new Map(); // email -> { email, name, passwordHash, verified, avatar }
 const otps = new Map(); // email -> { code, expiresAt }
 
 let transporterPromise = null;
@@ -102,12 +124,12 @@ app.post('/api/auth/register', async (req, res) => {
   if (users.has(email)) return res.status(400).json({ error: 'User already exists' });
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const user = { email, name, passwordHash, verified: true, createdAt: new Date().toISOString() };
+  const user = { email, name, passwordHash, verified: true, createdAt: new Date().toISOString(), avatar: null, active: true };
   users.set(email, user);
   otps.delete(email);
 
   setSession(res, email);
-  return res.json({ ok: true, user: { email, name } });
+  return res.json({ ok: true, user: { email, name, avatar: null } });
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -115,10 +137,11 @@ app.post('/api/auth/login', async (req, res) => {
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
   const user = users.get(email);
   if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+  if (!user.active) return res.status(400).json({ error: 'Account inactive' });
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) return res.status(400).json({ error: 'Invalid credentials' });
   setSession(res, email);
-  return res.json({ ok: true, user: { email: user.email, name: user.name } });
+  return res.json({ ok: true, user: { email: user.email, name: user.name, avatar: user.avatar } });
 });
 
 app.post('/api/auth/logout', (req, res) => {
@@ -131,7 +154,74 @@ app.get('/api/auth/session', (req, res) => {
   if (!session) return res.json({ ok: true, user: null });
   const user = users.get(session);
   if (!user) return res.json({ ok: true, user: null });
-  return res.json({ ok: true, user: { email: user.email, name: user.name } });
+  return res.json({ ok: true, user: { email: user.email, name: user.name, avatar: user.avatar } });
+});
+
+// User endpoints
+app.get('/api/user', (req, res) => {
+  const { session } = req.cookies || {};
+  if (!session) return res.status(401).json({ error: 'Not authenticated' });
+  const user = users.get(session);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json({ ok: true, user: { email: user.email, name: user.name, avatar: user.avatar, active: user.active } });
+});
+
+app.patch('/api/user', (req, res) => {
+  const { session } = req.cookies || {};
+  if (!session) return res.status(401).json({ error: 'Not authenticated' });
+  const user = users.get(session);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const { name } = req.body || {};
+  if (typeof name === 'string') user.name = name;
+  users.set(session, user);
+  res.json({ ok: true, user: { email: user.email, name: user.name, avatar: user.avatar } });
+});
+
+app.post('/api/user/avatar', upload.single('avatar'), (req, res) => {
+  const { session } = req.cookies || {};
+  if (!session) return res.status(401).json({ error: 'Not authenticated' });
+  const user = users.get(session);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const url = `/uploads/${req.file.filename}`;
+  user.avatar = url;
+  users.set(session, user);
+  res.json({ ok: true, url });
+});
+
+app.post('/api/user/password', async (req, res) => {
+  const { session } = req.cookies || {};
+  if (!session) return res.status(401).json({ error: 'Not authenticated' });
+  const user = users.get(session);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const { currentPassword, newPassword } = req.body || {};
+  if (!currentPassword || !newPassword) return res.status(400).json({ error: 'currentPassword and newPassword required' });
+  const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!ok) return res.status(400).json({ error: 'Current password incorrect' });
+  user.passwordHash = await bcrypt.hash(newPassword, 10);
+  users.set(session, user);
+  res.json({ ok: true });
+});
+
+app.post('/api/user/deactivate', (req, res) => {
+  const { session } = req.cookies || {};
+  if (!session) return res.status(401).json({ error: 'Not authenticated' });
+  const user = users.get(session);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  user.active = false;
+  users.set(session, user);
+  clearSession(res);
+  res.json({ ok: true });
+});
+
+app.post('/api/user/delete', (req, res) => {
+  const { session } = req.cookies || {};
+  if (!session) return res.status(401).json({ error: 'Not authenticated' });
+  const user = users.get(session);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  users.delete(session);
+  clearSession(res);
+  res.json({ ok: true });
 });
 
 app.listen(PORT, () => {

@@ -84,7 +84,9 @@ export const AppLayout = () => {
                   onClick={() => setMenuOpen((s) => !s)}
                   className="flex items-center gap-3 rounded-xl px-1.5 py-1 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300">{user?.name ? user.name.split(" ").map(n=>n[0]).slice(0,2).join("") : "AM"}</div>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                    {user?.avatar ? <img src={user.avatar} alt="avatar" className="h-full w-full object-cover rounded-xl" /> : (user?.name ? user.name.split(" ").map(n=>n[0]).slice(0,2).join("") : "AM")}
+                  </div>
                   <div className="hidden text-left md:block"><p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{user?.name ?? "Amina Mensah"}</p><p className="text-xs text-slate-500 dark:text-slate-400">{user?.email ?? "amina@example.com"}</p></div>
                   <ChevronDown className="hidden h-4 w-4 text-slate-400 md:block" />
                 </button>
