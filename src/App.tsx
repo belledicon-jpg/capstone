@@ -9,6 +9,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 import SanitationServices from "@/pages/SanitationServices";
+import InspectionsIndex from "@/pages/Inspections/Index";
+import InspectionDetails from "@/pages/Inspections/Details";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +25,8 @@ const App = () => (
             <Route element={<AppLayout />}>
               <Route path="/" element={<Index />} />
               <Route path="/sanitation-services" element={<SanitationServices />} />
+              <Route path="/inspections" element={<InspectionsIndex />} />
+              <Route path="/inspections/:id" element={<InspectionDetails />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
