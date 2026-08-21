@@ -14,6 +14,8 @@ import InspectionDetails from "@/pages/Inspections/Details";
 import InspectionsNew from "@/pages/Inspections/New";
 import Login from "@/pages/Auth/Login";
 import Signup from "@/pages/Auth/Signup";
+import Profile from "@/pages/Profile";
+import Settings from "@/pages/Settings";
 import { AuthProvider, RequireAuth } from "@/hooks/useAuth";
 
 const queryClient = new QueryClient();
@@ -34,6 +36,8 @@ const App = () => (
                 <Route path="/inspections" element={<RequireAuth><InspectionsIndex /></RequireAuth>} />
                 <Route path="/inspections/new" element={<RequireAuth><InspectionsNew /></RequireAuth>} />
                 <Route path="/inspections/:id" element={<RequireAuth><InspectionDetails /></RequireAuth>} />
+                <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+                <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
               </Route>
 
               {/* Public / standalone routes (no AppLayout) */}
