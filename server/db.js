@@ -23,6 +23,13 @@ if (needInit) {
       code TEXT,
       expiresAt INTEGER
     );
+
+    CREATE TABLE sessions (
+      id TEXT PRIMARY KEY,
+      email TEXT,
+      expiresAt INTEGER,
+      createdAt TEXT
+    );
   `);
 }
 
@@ -50,6 +57,7 @@ module.exports = {
   deleteUser(email) {
     db.prepare('DELETE FROM users WHERE email = ?').run(email);
     db.prepare('DELETE FROM otps WHERE email = ?').run(email);
+    db.prepare('DELETE FROM sessions WHERE email = ?').run(email);
   },
   setOTP(email, code, expiresAt) {
     db.prepare('INSERT OR REPLACE INTO otps (email, code, expiresAt) VALUES (?, ?, ?)').run(email, code, expiresAt);
@@ -67,5 +75,23 @@ module.exports = {
   deactivateUser(email) {
     db.prepare('UPDATE users SET active = 0 WHERE email = ?').run(email);
     return this.getUser(email);
+  },
+  // sessions
+  createSession(id, email, expiresAt) {
+    const createdAt = new Date().toISOString();
+    db.prepare('INSERT INTO sessions (id, email, expiresAt, createdAt) VALUES (?, ?, ?, ?)').run(id, email, expiresAt, createdAt);
+  },
+  getSession(id) {
+    if (!id) return null;
+    const row = db.prepare('SELECT id, email, expiresAt, createdAt FROM sessions WHERE id = ?').get(id);
+    if (!row) return null;
+    if (Date.now() > row.expiresAt) {
+      db.prepare('DELETE FROM sessions WHERE id = ?').run(id);
+      return null;
+    }
+    return row;
+  },
+  deleteSession(id) {
+    db.prepare('DELETE FROM sessions WHERE id = ?').run(id);
   }
 };

@@ -1,4 +1,5 @@
 const express = require('express');
+const sgMail = require('@sendgrid/mail');
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
@@ -7,6 +8,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const db = require('./db');
 require('dotenv').config();
 
@@ -26,7 +29,7 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 // serve uploaded files
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// Multer setup
+// Multer setup (disk storage for fallback)
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, UPLOADS_DIR);
@@ -38,39 +41,79 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-let transporterPromise = null;
+// S3 client (optional)
+let s3Client = null;
+const S3_BUCKET = process.env.S3_BUCKET;
+if (process.env.S3_BUCKET && process.env.S3_REGION && process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
+  s3Client = new S3Client({
+    region: process.env.S3_REGION,
+    credentials: {
+      accessKeyId: process.env.S3_ACCESS_KEY_ID,
+      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+    },
+  });
+}
 
-async function getTransporter() {
-  if (transporterPromise) return transporterPromise;
-  transporterPromise = (async () => {
-    if (process.env.SMTP_HOST) {
-      return nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587,
-        secure: false,
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      });
+// SendGrid (optional)
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
+
+async function sendEmail(to, subject, text, html) {
+  if (process.env.SENDGRID_API_KEY) {
+    // Send via SendGrid
+    try {
+      const msg = { to, from: process.env.SENDGRID_FROM || 'no-reply@govserve.local', subject, text, html };
+      await sgMail.send(msg);
+      return { ok: true };
+    } catch (err) {
+      console.error('SendGrid failed', err);
+      return { ok: false, error: 'Email send failed' };
     }
+  }
 
-    // otherwise, create a test account on Ethereal
-    const testAccount = await nodemailer.createTestAccount();
-    return nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: { user: testAccount.user, pass: testAccount.pass },
-    });
-  })();
-  return transporterPromise;
+  // fallback to Ethereal/Nodemailer
+  try {
+    const transporter = await (async () => {
+      const testAccount = await nodemailer.createTestAccount();
+      return nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: { user: testAccount.user, pass: testAccount.pass },
+      });
+    })();
+
+    const info = await transporter.sendMail({ from: 'no-reply@govserve.local', to, subject, text, html });
+    const preview = nodemailer.getTestMessageUrl(info) || null;
+    return { ok: true, previewUrl: preview };
+  } catch (err) {
+    console.error('Nodemailer failed', err);
+    return { ok: false, error: 'Email send failed' };
+  }
 }
 
 function setSession(res, email) {
-  // In production use a secure, signed session ID stored server-side or HTTP-only cookie with proper flags
-  res.cookie('session', email, { httpOnly: true, sameSite: 'lax', secure: false });
+  const id = crypto.randomBytes(24).toString('hex');
+  const expiresAt = Date.now() + 1000 * 60 * 60 * 24 * 7; // 7 days
+  db.createSession(id, email, expiresAt);
+  res.cookie('sessionId', id, { httpOnly: true, sameSite: 'lax', secure: false });
 }
 
-function clearSession(res) {
-  res.clearCookie('session');
+function clearSession(res, req) {
+  const sid = req.cookies?.sessionId;
+  if (sid) db.deleteSession(sid);
+  res.clearCookie('sessionId');
+}
+
+async function getSessionUser(req) {
+  const sid = req.cookies?.sessionId;
+  if (!sid) return null;
+  const s = db.getSession(sid);
+  if (!s) return null;
+  const user = db.getUser(s.email);
+  if (!user) return null;
+  return { sessionId: sid, user };
 }
 
 app.post('/api/auth/send-otp', async (req, res) => {
@@ -82,17 +125,10 @@ app.post('/api/auth/send-otp', async (req, res) => {
   db.setOTP(email, code, expiresAt);
 
   try {
-    const transporter = await getTransporter();
-    const info = await transporter.sendMail({
-      from: 'no-reply@govserve.local',
-      to: email,
-      subject: 'Your GovServe verification code',
-      text: `Your verification code is: ${code} (expires in 10 minutes)`,
-      html: `<p>Your verification code is: <strong>${code}</strong> (expires in 10 minutes)</p>`,
-    });
-
-    const preview = nodemailer.getTestMessageUrl(info) || null;
-    return res.json({ ok: true, previewUrl: preview });
+    const r = await sendEmail(email, 'Your GovServe verification code', `Your verification code is: ${code} (expires in 10 minutes)`, `<p>Your verification code is: <strong>${code}</strong> (expires in 10 minutes)</p>`);
+    if (!r.ok) return res.status(500).json({ error: 'Failed to send email' });
+    // if nodemailer/Ethereal returned previewUrl, forward it to client for dev convenience
+    return res.json({ ok: true, previewUrl: r.previewUrl || null });
   } catch (err) {
     console.error('Failed to send email', err);
     return res.status(500).json({ error: 'Failed to send email' });
@@ -141,81 +177,93 @@ app.post('/api/auth/login', async (req, res) => {
   return res.json({ ok: true, user: { email: user.email, name: user.name, avatar: user.avatar } });
 });
 
-app.post('/api/auth/logout', (req, res) => {
-  clearSession(res);
+app.post('/api/auth/logout', async (req, res) => {
+  clearSession(res, req);
   return res.json({ ok: true });
 });
 
-app.get('/api/auth/session', (req, res) => {
-  const { session } = req.cookies || {};
-  if (!session) return res.json({ ok: true, user: null });
-  const user = db.getUser(session);
-  if (!user) return res.json({ ok: true, user: null });
-  return res.json({ ok: true, user: { email: user.email, name: user.name, avatar: user.avatar } });
+app.get('/api/auth/session', async (req, res) => {
+  const sess = await getSessionUser(req);
+  if (!sess) return res.json({ ok: true, user: null });
+  return res.json({ ok: true, user: { email: sess.user.email, name: sess.user.name, avatar: sess.user.avatar } });
 });
 
 // User endpoints
-app.get('/api/user', (req, res) => {
-  const { session } = req.cookies || {};
-  if (!session) return res.status(401).json({ error: 'Not authenticated' });
-  const user = db.getUser(session);
-  if (!user) return res.status(404).json({ error: 'User not found' });
+app.get('/api/user', async (req, res) => {
+  const sess = await getSessionUser(req);
+  if (!sess) return res.status(401).json({ error: 'Not authenticated' });
+  const { user } = sess;
   res.json({ ok: true, user: { email: user.email, name: user.name, avatar: user.avatar, active: user.active } });
 });
 
-app.patch('/api/user', (req, res) => {
-  const { session } = req.cookies || {};
-  if (!session) return res.status(401).json({ error: 'Not authenticated' });
-  const user = db.getUser(session);
-  if (!user) return res.status(404).json({ error: 'User not found' });
+app.patch('/api/user', async (req, res) => {
+  const sess = await getSessionUser(req);
+  if (!sess) return res.status(401).json({ error: 'Not authenticated' });
   const { name } = req.body || {};
-  if (typeof name === 'string') db.updateUser(session, { name });
-  const updated = db.getUser(session);
+  if (typeof name === 'string') db.updateUser(sess.user.email, { name });
+  const updated = db.getUser(sess.user.email);
   res.json({ ok: true, user: { email: updated.email, name: updated.name, avatar: updated.avatar } });
 });
 
-app.post('/api/user/avatar', upload.single('avatar'), (req, res) => {
-  const { session } = req.cookies || {};
-  if (!session) return res.status(401).json({ error: 'Not authenticated' });
-  const user = db.getUser(session);
-  if (!user) return res.status(404).json({ error: 'User not found' });
+app.post('/api/user/avatar', upload.single('avatar'), async (req, res) => {
+  const sess = await getSessionUser(req);
+  if (!sess) return res.status(401).json({ error: 'Not authenticated' });
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+  // If S3 configured, upload and return signed URL
+  if (s3Client) {
+    const key = `avatars/${req.file.filename}`;
+    const fileStream = fs.createReadStream(req.file.path);
+    const put = new PutObjectCommand({ Bucket: S3_BUCKET, Key: key, Body: fileStream, ContentType: req.file.mimetype });
+    try {
+      await s3Client.send(put);
+      // generate a signed GET URL
+      const getCmd = new GetObjectCommand({ Bucket: S3_BUCKET, Key: key });
+      const url = await getSignedUrl(s3Client, getCmd, { expiresIn: 60 * 60 }); // 1 hour
+      // delete local file
+      fs.unlinkSync(req.file.path);
+      db.updateUser(sess.user.email, { avatar: url });
+      return res.json({ ok: true, url });
+    } catch (err) {
+      console.error('S3 upload failed', err);
+      return res.status(500).json({ error: 'Upload failed' });
+    }
+  }
+
+  // fallback: local file
   const url = `/uploads/${req.file.filename}`;
-  db.updateUser(session, { avatar: url });
-  res.json({ ok: true, url });
+  db.updateUser(sess.user.email, { avatar: url });
+  return res.json({ ok: true, url });
 });
 
 app.post('/api/user/password', async (req, res) => {
-  const { session } = req.cookies || {};
-  if (!session) return res.status(401).json({ error: 'Not authenticated' });
-  const user = db.getUser(session);
-  if (!user) return res.status(404).json({ error: 'User not found' });
+  const sess = await getSessionUser(req);
+  if (!sess) return res.status(401).json({ error: 'Not authenticated' });
   const { currentPassword, newPassword } = req.body || {};
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'currentPassword and newPassword required' });
-  const ok = await bcrypt.compare(currentPassword, user.passwordHash);
-  if (!ok) return res.status(400).json({ error: 'Current password incorrect' });
+  const ok = await bcrypt.compare(currentPassword, sess.user.passwordHash || sess.user.passwordHash);
+  // Note: getSessionUser returns user without passwordHash; fetch raw user
+  const rawUser = db.getUser(sess.user.email);
+  const ok2 = await bcrypt.compare(currentPassword, rawUser.passwordHash);
+  if (!ok2) return res.status(400).json({ error: 'Current password incorrect' });
   const newHash = await bcrypt.hash(newPassword, 10);
-  db.changePassword(session, newHash);
+  db.changePassword(sess.user.email, newHash);
   res.json({ ok: true });
 });
 
-app.post('/api/user/deactivate', (req, res) => {
-  const { session } = req.cookies || {};
-  if (!session) return res.status(401).json({ error: 'Not authenticated' });
-  const user = db.getUser(session);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  db.deactivateUser(session);
-  clearSession(res);
+app.post('/api/user/deactivate', async (req, res) => {
+  const sess = await getSessionUser(req);
+  if (!sess) return res.status(401).json({ error: 'Not authenticated' });
+  db.deactivateUser(sess.user.email);
+  clearSession(res, req);
   res.json({ ok: true });
 });
 
-app.post('/api/user/delete', (req, res) => {
-  const { session } = req.cookies || {};
-  if (!session) return res.status(401).json({ error: 'Not authenticated' });
-  const user = db.getUser(session);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  db.deleteUser(session);
-  clearSession(res);
+app.post('/api/user/delete', async (req, res) => {
+  const sess = await getSessionUser(req);
+  if (!sess) return res.status(401).json({ error: 'Not authenticated' });
+  db.deleteUser(sess.user.email);
+  clearSession(res, req);
   res.json({ ok: true });
 });
 
