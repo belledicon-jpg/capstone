@@ -12,7 +12,6 @@ import SanitationServices from "@/pages/SanitationServices";
 import InspectionsIndex from "@/pages/Inspections/Index";
 import InspectionDetails from "@/pages/Inspections/Details";
 import InspectionsNew from "@/pages/Inspections/New";
-import Login from "@/pages/Auth/Login";
 import Signup from "@/pages/Auth/Signup";
 import Profile from "@/pages/Profile";
 import Settings from "@/pages/Settings";
@@ -41,7 +40,6 @@ const App = () => (
               </Route>
 
               {/* Public / standalone routes (no AppLayout) */}
-              <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
 
               <Route path="*" element={<NotFound />} />

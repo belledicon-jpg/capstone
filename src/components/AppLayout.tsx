@@ -96,7 +96,7 @@ export const AppLayout = () => {
                     <button onClick={() => { setMenuOpen(false); navigate('/profile'); }} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800">Profile</button>
                     <button onClick={() => { setMenuOpen(false); navigate('/settings'); }} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800">Settings</button>
                     <div className="border-t my-1" />
-                    <button onClick={async () => { setMenuOpen(false); await logout(); navigate('/login'); }} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-slate-50 dark:hover:bg-slate-800">Sign out</button>
+                    <button onClick={async () => { setMenuOpen(false); await logout(); navigate('/signup'); }} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-slate-50 dark:hover:bg-slate-800">Sign out</button>
                   </div>
                 )}
               </div>

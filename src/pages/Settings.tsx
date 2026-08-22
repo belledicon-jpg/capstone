@@ -11,7 +11,7 @@ const Settings = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/signup');
   };
 
   const handleDeactivate = async () => {
@@ -21,7 +21,7 @@ const Settings = () => {
       const res = await userApi.apiDeactivateUser();
       if (!res?.ok) throw new Error(res?.error || 'Failed');
       await logout();
-      navigate('/login');
+      navigate('/signup');
     } catch (err: any) {
       alert(err.message || 'Failed to deactivate');
     } finally {
@@ -36,7 +36,7 @@ const Settings = () => {
       const res = await userApi.apiDeleteUser();
       if (!res?.ok) throw new Error(res?.error || 'Failed');
       await logout();
-      navigate('/login');
+      navigate('/signup');
     } catch (err: any) {
       alert(err.message || 'Failed to delete');
     } finally {

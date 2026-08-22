@@ -68,7 +68,7 @@ With this config in place:
 ```
 .
 ├── src/
-│   ├── pages/          # React pages (Login, Signup, Profile, Settings, Dashboard, etc.)
+│   ├── pages/          # React pages (Signup, Profile, Settings, Dashboard, etc.)
 │   ├── components/     # Reusable UI components (AppLayout, Header, etc.)
 │   ├── hooks/          # Custom hooks (useAuth, etc.)
 │   ├── lib/
@@ -90,7 +90,7 @@ With this config in place:
 
 ## Features
 
-- **Authentication**: OTP-based signup/login with email verification
+- **Authentication**: OTP-based signup with email verification and session-based access
 - **Profile Management**: Edit name, upload avatar, change password
 - **Session Management**: Server-side sessions with secure HTTP-only cookies
 - **Account Actions**: Deactivate or delete account
