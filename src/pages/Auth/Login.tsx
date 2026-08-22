@@ -48,7 +48,7 @@ const Login = () => {
           <div className="mx-auto flex h-full max-w-[1400px] items-center justify-between px-6 lg:px-10">
             <Link to="/" className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-700">
-                <HeartPulse className="h-4.5 w-4.5 text-white" />
+                <HeartPulse className="h-[18px] w-[18px] text-white" />
               </div>
 
               <div>
@@ -99,8 +99,8 @@ const Login = () => {
 
         <div className="grid min-h-[calc(100vh-70px)] lg:grid-cols-2">
           <section className="relative flex items-center overflow-hidden bg-[linear-gradient(135deg,#2151df_0%,#2b5fe8_45%,#2457e2_100%)] px-8 py-16 sm:px-12 lg:px-16">
-            <div className="absolute -right-28 -top-28 h-80 w-80 rounded-full bg-white/8" />
-            <div className="absolute -bottom-36 -left-28 h-88 w-88 rounded-full bg-[#143fb8]/35" />
+            <div className="absolute -right-28 -top-28 h-80 w-80 rounded-full bg-white/[0.08]" />
+            <div className="absolute -bottom-36 -left-28 h-[352px] w-[352px] rounded-full bg-[#143fb8]/35" />
 
             <div className="relative z-10 max-w-[520px]">
               <ScrollReveal>
@@ -163,7 +163,7 @@ const Login = () => {
                     </p>
                   </div>
 
-                  <form onSubmit={submit} className="space-y-4.5">
+                  <form onSubmit={submit} className="space-y-[18px]">
                     <div>
                       <label
                         htmlFor="email"
