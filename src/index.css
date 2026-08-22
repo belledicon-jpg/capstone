@@ -102,6 +102,7 @@
     color: rgb(241 245 249);
   }
 
+  /* Intentionally remap slate-500 text inside dark dashboard cards to slate-400 for contrast. */
   .dark .dashboard-card .text-slate-500 {
     color: rgb(148 163 184);
   }
