@@ -16,11 +16,17 @@ async function request<T extends ApiResponse>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
+  // Get CSRF token from cookie if available
+  const match = document.cookie.match(new RegExp("(?:^|; )csrf-token=([^;]*)"));
+  const csrfToken = match ? decodeURIComponent(match[1]) : "";
+
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+      ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
       ...(options.headers || {}),
     },
   });
