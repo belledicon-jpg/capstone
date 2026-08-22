@@ -9,48 +9,117 @@ const Accordion = AccordionPrimitive.Root;
 const AccordionItem = React.forwardRef<
   React.ElementRef<typeof AccordionPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Item>
->(({ className, ...props }, ref) => (
-  <AccordionPrimitive.Item
-    ref={ref}
-    className={cn("border-b", className)}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  return (
+    <AccordionPrimitive.Item
+      ref={ref}
+      className={cn("border-b border-slate-200", className)}
+      {...props}
+    />
+  );
+});
+
 AccordionItem.displayName = "AccordionItem";
 
 const AccordionTrigger = React.forwardRef<
   React.ElementRef<typeof AccordionPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
-  <AccordionPrimitive.Header className="flex">
-    <AccordionPrimitive.Trigger
-      ref={ref}
-      className={cn(
-        "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-    </AccordionPrimitive.Trigger>
-  </AccordionPrimitive.Header>
-));
-AccordionTrigger.displayName = AccordionPrimitive.Trigger.displayName;
+>(({ className, children, ...props }, ref) => {
+  return (
+    <AccordionPrimitive.Header className="flex">
+      <AccordionPrimitive.Trigger
+        ref={ref}
+        className={cn(
+          "flex flex-1 items-center justify-between py-4 text-left text-sm font-medium transition-all",
+          "hover:text-blue-600",
+          "[&[data-state=open]>svg]:rotate-180",
+          className
+        )}
+        {...props}
+      >
+        <span>{children}</span>
+
+        <ChevronDown
+          className="h-4 w-4 shrink-0 transition-transform duration-200"
+          aria-hidden="true"
+        />
+      </AccordionPrimitive.Trigger>
+    </AccordionPrimitive.Header>
+  );
+});
+
+AccordionTrigger.displayName =
+  AccordionPrimitive.Trigger.displayName;
 
 const AccordionContent = React.forwardRef<
   React.ElementRef<typeof AccordionPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <AccordionPrimitive.Content
-    ref={ref}
-    className="overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
-    {...props}
-  >
-    <div className={cn("pb-4 pt-0", className)}>{children}</div>
-  </AccordionPrimitive.Content>
-));
+>(({ className, children, ...props }, ref) => {
+  return (
+    <AccordionPrimitive.Content
+      ref={ref}
+      className={cn(
+        "overflow-hidden text-sm text-slate-600",
+        "data-[state=closed]:animate-accordion-up",
+        "data-[state=open]:animate-accordion-down",
+        className
+      )}
+      {...props}
+    >
+      <div className="pb-4 pt-0">
+        {children}
+      </div>
+    </AccordionPrimitive.Content>
+  );
+});
 
-AccordionContent.displayName = AccordionPrimitive.Content.displayName;
+AccordionContent.displayName =
+  AccordionPrimitive.Content.displayName;
 
-export { Accordion, AccordionItem, AccordionTrigger, AccordionContent };
+export {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+};
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+
+  theme: {
+    extend: {
+      keyframes: {
+        "accordion-down": {
+          from: {
+            height: "0",
+          },
+          to: {
+            height: "var(--radix-accordion-content-height)",
+          },
+        },
+
+        "accordion-up": {
+          from: {
+            height: "var(--radix-accordion-content-height)",
+          },
+          to: {
+            height: "0",
+          },
+        },
+      },
+
+      animation: {
+        "accordion-down":
+          "accordion-down 0.2s ease-out",
+
+        "accordion-up":
+          "accordion-up 0.2s ease-out",
+      },
+    },
+  },
+
+  plugins: [],
+};
