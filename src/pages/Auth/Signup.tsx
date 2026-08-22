@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { PageTransition, ScrollReveal } from "@/components/animations";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -70,8 +70,7 @@ const Signup = () => {
                 <input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 w-full rounded border px-3 py-2" required />
               </div>
               {error && <div className="text-sm text-red-600">{error}</div>}
-              <div className="flex justify-between items-center">
-                <Link to="/login" className="text-sm text-blue-600 underline">Already have an account?</Link>
+              <div className="flex justify-end">
                 <Button type="submit">Send OTP</Button>
               </div>
             </form>
