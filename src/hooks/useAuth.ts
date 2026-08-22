@@ -10,8 +10,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     let mounted = true;
-    api
-      .apiGetSession()
+    // Pre-fetch CSRF token and user session
+    api.ensureCsrfToken()
+      .then(() => api.apiGetSession())
       .then((json) => {
         if (!mounted) return;
         if (json?.user) setUser(json.user);

@@ -23,17 +23,26 @@ const PORT = process.env.PORT || 4000;
 app.use(cors({
   origin: true,
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-CSRF-Token',
+    'X-CSRF-TOKEN',
+    'X-XSRF-TOKEN',
+    'CSRF-Token',
+    'X-Requested-With'
+  ],
 }));
 
 // CSRF Token endpoint
 app.get('/api/csrf-token', (req, res) => {
-  let csrfToken = req.cookies?.['csrf-token'];
+  let csrfToken = req.cookies?.['csrf-token'] || req.cookies?.['XSRF-TOKEN'] || req.cookies?.['_csrf'];
   if (!csrfToken) {
     csrfToken = crypto.randomBytes(32).toString('hex');
-    res.cookie('csrf-token', csrfToken, { httpOnly: false, sameSite: 'lax', secure: false });
   }
-  return res.json({ ok: true, csrfToken });
+  res.cookie('csrf-token', csrfToken, { httpOnly: false, sameSite: 'lax', secure: false });
+  res.cookie('XSRF-TOKEN', csrfToken, { httpOnly: false, sameSite: 'lax', secure: false });
+  return res.json({ ok: true, csrfToken, csrf_token: csrfToken });
 });
 
 // ensure uploads dir exists

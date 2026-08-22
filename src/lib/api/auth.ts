@@ -5,6 +5,7 @@ export type ApiResponse = {
   message?: string;
   error?: string;
   previewUrl?: string | null;
+  csrfToken?: string;
   user?: {
     email: string;
     name: string;
@@ -12,23 +13,62 @@ export type ApiResponse = {
   } | null;
 };
 
+// Extract CSRF token from document cookies
+function getCookieToken(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(
+    /(?:^|; )(?:csrf-token|XSRF-TOKEN|_csrf)=([^;]*)/
+  );
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+// Ensure a CSRF token exists, fetching one if necessary
+export async function ensureCsrfToken(): Promise<string> {
+  let token = getCookieToken();
+  if (token) return token;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/csrf-token`, {
+      method: "GET",
+      credentials: "include",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      token = data.csrfToken || data.csrf_token || getCookieToken() || "";
+    }
+  } catch {
+    // ignore fetch error
+  }
+
+  return token || "";
+}
+
 async function request<T extends ApiResponse>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  // Get CSRF token from cookie if available
-  const match = document.cookie.match(new RegExp("(?:^|; )csrf-token=([^;]*)"));
-  const csrfToken = match ? decodeURIComponent(match[1]) : "";
+  const token = await ensureCsrfToken();
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Requested-With": "XMLHttpRequest",
+  };
+
+  if (token) {
+    headers["X-CSRF-Token"] = token;
+    headers["X-CSRF-TOKEN"] = token;
+    headers["X-XSRF-TOKEN"] = token;
+    headers["CSRF-Token"] = token;
+  }
+
+  if (options.headers) {
+    Object.assign(headers, options.headers);
+  }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Requested-With": "XMLHttpRequest",
-      ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
-      ...(options.headers || {}),
-    },
+    headers,
   });
 
   let data: T;
