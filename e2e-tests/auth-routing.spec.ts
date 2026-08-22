@@ -11,6 +11,7 @@ test("signup remains public and no longer links to a login page", async ({ page 
 test("login route is removed", async ({ page }) => {
   await page.goto("/login");
 
+  await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole("heading", { name: "404" })).toBeVisible();
   await expect(page.getByText("Oops! Page not found")).toBeVisible();
 });
