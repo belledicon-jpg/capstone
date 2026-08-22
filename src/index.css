@@ -99,21 +99,20 @@
   .dark .dashboard-card .text-slate-900,
   .dark .dashboard-card .text-slate-800,
   .dark .dashboard-card .text-slate-700 {
-    @apply text-slate-100;
+    color: rgb(241 245 249);
   }
 
-  /* Removed .text-slate-400 from this selector to avoid circular @apply (applying a utility inside a selector that matches that same utility). */
   .dark .dashboard-card .text-slate-500 {
-    @apply text-slate-400;
+    color: rgb(148 163 184);
   }
 
   .dark .dashboard-card .border-slate-100,
   .dark .dashboard-card .border-slate-200 {
-    @apply border-slate-800;
+    border-color: rgb(30 41 59);
   }
 
   .dark .dashboard-card .bg-slate-50\/70 {
-    @apply bg-slate-800/70;
+    background-color: rgb(30 41 59 / 0.7);
   }
 }
 
