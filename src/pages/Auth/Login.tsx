@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
-  HeartPulse,
   CalendarDays,
   FileCheck2,
   ShieldCheck,
@@ -9,7 +8,9 @@ import {
   EyeOff,
   ArrowRight,
   CircleHelp,
+  HeartPulse,
 } from "lucide-react";
+import logoSrc from "@/assets/logo.png";
 
 import { PageTransition, ScrollReveal } from "@/components/animations";
 import { useAuth } from "@/hooks/useAuth";
@@ -47,9 +48,7 @@ const Login = () => {
         <header className="h-[70px] border-b border-slate-100 bg-white">
           <div className="mx-auto flex h-full max-w-[1400px] items-center justify-between px-6 lg:px-10">
             <Link to="/" className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-700">
-                <HeartPulse className="h-4.5 w-4.5 text-white" />
-              </div>
+              <img src={logoSrc} alt="Government Seal" className="h-9 w-9 rounded-full object-cover" />
 
               <div>
                 <h1 className="text-[13px] font-bold tracking-tight text-slate-800">
