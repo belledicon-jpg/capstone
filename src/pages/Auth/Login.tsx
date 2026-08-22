@@ -28,17 +28,29 @@ const Login = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [devPreviewUrl, setDevPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<"none" | "login" | "send" | "verify" | "create">("none");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const getErrorMessage = (err: unknown, fallback: string) =>
     err instanceof Error ? err.message : fallback;
+  const isLoading = actionLoading !== "none";
+  const safePreviewUrl = (() => {
+    if (!devPreviewUrl) return null;
+    try {
+      const url = new URL(devPreviewUrl);
+      const isHttps = url.protocol === "https:";
+      const isLocalHttp = url.protocol === "http:" && (url.hostname === "localhost" || url.hostname === "127.0.0.1");
+      return isHttps || isLocalHttp ? devPreviewUrl : null;
+    } catch {
+      return null;
+    }
+  })();
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     setError(null);
-    setLoading(true);
+    setActionLoading("login");
 
     try {
       await login(email, password);
@@ -46,7 +58,7 @@ const Login = () => {
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Login failed"));
     } finally {
-      setLoading(false);
+      setActionLoading("none");
     }
   };
 
@@ -54,26 +66,30 @@ const Login = () => {
     e?.preventDefault();
     setError(null);
     if (!email) return setError("Email required");
+    setActionLoading("send");
     try {
       const res = await sendOTP(email);
-      if (res?.previewUrl) {
-        setDevPreviewUrl(res.previewUrl);
-      }
+      setDevPreviewUrl(res?.previewUrl ?? null);
       setStep("verify");
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to send OTP"));
+    } finally {
+      setActionLoading("none");
     }
   };
 
   const handleVerify = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
+    setActionLoading("verify");
     try {
       const res = await verifyOTP(email, otp);
       if (!res?.ok) return setError(res?.error || "Invalid or expired code");
       setStep("account");
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Verification failed"));
+    } finally {
+      setActionLoading("none");
     }
   };
 
@@ -81,12 +97,15 @@ const Login = () => {
     e.preventDefault();
     setError(null);
     if (!name || !signupPassword) return setError("Name and password required");
+    setActionLoading("create");
     try {
       const res = await register({ email, name, password: signupPassword, code: otp });
       if (!res?.ok) return setError(res?.error || "Failed to create account");
       navigate("/");
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to create account"));
+    } finally {
+      setActionLoading("none");
     }
   };
 
@@ -94,11 +113,22 @@ const Login = () => {
     setError(null);
     setMode("signup");
     setStep("email");
+    setOtp("");
+    setName("");
+    setSignupPassword("");
+    setDevPreviewUrl(null);
+    setActionLoading("none");
   };
 
   const showLogin = () => {
     setError(null);
     setMode("login");
+    setStep("email");
+    setOtp("");
+    setName("");
+    setSignupPassword("");
+    setDevPreviewUrl(null);
+    setActionLoading("none");
   };
 
   return (
@@ -308,11 +338,11 @@ const Login = () => {
 
                         <button
                           type="submit"
-                          disabled={loading}
+                          disabled={isLoading}
                           className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-semibold text-white shadow-[0_8px_18px_rgba(37,99,235,0.25)] transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {loading ? "Signing in..." : "Sign in"}
-                          {!loading && <ArrowRight className="h-4 w-4" />}
+                          {actionLoading === "login" ? "Signing in..." : "Sign in"}
+                          {actionLoading !== "login" && <ArrowRight className="h-4 w-4" />}
                         </button>
                       </form>
 
@@ -377,9 +407,10 @@ const Login = () => {
                             </button>
                             <button
                               type="submit"
+                              disabled={isLoading}
                               className="flex h-10 items-center justify-center gap-2 rounded-full bg-blue-600 px-5 text-[13px] font-semibold text-white shadow-[0_8px_18px_rgba(37,99,235,0.25)] transition hover:bg-blue-700"
                             >
-                              Send OTP
+                              {actionLoading === "send" ? "Sending..." : "Send OTP"}
                             </button>
                           </div>
                         </form>
@@ -408,10 +439,10 @@ const Login = () => {
                             />
                           </div>
 
-                          {devPreviewUrl && (
+                          {safePreviewUrl && (
                             <p className="text-[11px] text-slate-500">
                               (dev) Preview email:{" "}
-                              <a href={devPreviewUrl} target="_blank" rel="noreferrer" className="underline">
+                              <a href={safePreviewUrl} target="_blank" rel="noreferrer" className="underline">
                                 Open
                               </a>
                             </p>
@@ -426,7 +457,10 @@ const Login = () => {
                           <div className="flex items-center justify-between gap-2">
                             <button
                               type="button"
-                              onClick={() => setStep("email")}
+                              onClick={() => {
+                                setStep("email");
+                                setDevPreviewUrl(null);
+                              }}
                               className="text-[12px] font-medium text-blue-600 hover:text-blue-700"
                             >
                               Back
@@ -435,15 +469,17 @@ const Login = () => {
                               <button
                                 type="button"
                                 onClick={handleSend}
+                                disabled={isLoading}
                                 className="flex h-10 items-center justify-center rounded-full border border-slate-200 px-4 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50"
                               >
-                                Resend
+                                {actionLoading === "send" ? "Sending..." : "Resend"}
                               </button>
                               <button
                                 type="submit"
+                                disabled={isLoading}
                                 className="flex h-10 items-center justify-center rounded-full bg-blue-600 px-5 text-[13px] font-semibold text-white shadow-[0_8px_18px_rgba(37,99,235,0.25)] transition hover:bg-blue-700"
                               >
-                                Verify
+                                {actionLoading === "verify" ? "Verifying..." : "Verify"}
                               </button>
                             </div>
                           </div>
@@ -502,9 +538,10 @@ const Login = () => {
                             </button>
                             <button
                               type="submit"
+                              disabled={isLoading}
                               className="flex h-10 items-center justify-center rounded-full bg-blue-600 px-5 text-[13px] font-semibold text-white shadow-[0_8px_18px_rgba(37,99,235,0.25)] transition hover:bg-blue-700"
                             >
-                              Create account
+                              {actionLoading === "create" ? "Creating..." : "Create account"}
                             </button>
                           </div>
                         </form>
