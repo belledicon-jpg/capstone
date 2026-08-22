@@ -60,35 +60,78 @@ if (process.env.SENDGRID_API_KEY) {
 }
 
 async function sendEmail(to, subject, text, html) {
+  // 1. Send via SendGrid if configured
   if (process.env.SENDGRID_API_KEY) {
-    // Send via SendGrid
     try {
-      const msg = { to, from: process.env.SENDGRID_FROM || 'no-reply@govserve.local', subject, text, html };
+      const msg = {
+        to,
+        from: process.env.SENDGRID_FROM || process.env.EMAIL_FROM || process.env.SMTP_FROM || 'no-reply@govserve.local',
+        subject,
+        text,
+        html,
+      };
       await sgMail.send(msg);
       return { ok: true };
     } catch (err) {
       console.error('SendGrid failed', err);
-      return { ok: false, error: 'Email send failed' };
+      return { ok: false, error: 'Email send failed via SendGrid' };
     }
   }
 
-  // fallback to Ethereal/Nodemailer
-  try {
-    const transporter = await (async () => {
-      const testAccount = await nodemailer.createTestAccount();
-      return nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: { user: testAccount.user, pass: testAccount.pass },
+  // 2. Send via custom SMTP server if configured (e.g., Gmail, Outlook, Amazon SES, Mailgun)
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    try {
+      const port = parseInt(process.env.SMTP_PORT || '587', 10);
+      const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: port,
+        secure: secure,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
       });
-    })();
 
-    const info = await transporter.sendMail({ from: 'no-reply@govserve.local', to, subject, text, html });
+      const fromAddress = process.env.SMTP_FROM || process.env.EMAIL_FROM || process.env.SMTP_USER;
+      const info = await transporter.sendMail({
+        from: fromAddress,
+        to,
+        subject,
+        text,
+        html,
+      });
+
+      console.log(`Email sent to ${to} via SMTP (${info.messageId})`);
+      return { ok: true };
+    } catch (err) {
+      console.error('SMTP email send failed:', err);
+      return { ok: false, error: `SMTP email failed: ${err.message}` };
+    }
+  }
+
+  // 3. Dev Fallback: Ethereal test account with preview link
+  try {
+    const testAccount = await nodemailer.createTestAccount();
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: { user: testAccount.user, pass: testAccount.pass },
+    });
+
+    const info = await transporter.sendMail({
+      from: 'no-reply@govserve.local',
+      to,
+      subject,
+      text,
+      html,
+    });
     const preview = nodemailer.getTestMessageUrl(info) || null;
+    console.log(`[Dev Fallback] Simulated OTP email to ${to}. Preview URL: ${preview}`);
     return { ok: true, previewUrl: preview };
   } catch (err) {
-    console.error('Nodemailer failed', err);
+    console.error('Nodemailer test transport failed', err);
     return { ok: false, error: 'Email send failed' };
   }
 }

@@ -346,14 +346,14 @@ const Signup = () => {
                           htmlFor="email"
                           className="mb-1 block text-xs font-semibold text-slate-700"
                         >
-                          Email Address:
+                          Personal Email Address:
                         </label>
                         <input
                           id="email"
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          placeholder="Enter Email Address"
+                          placeholder="name@example.com"
                           required
                           className="h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         />
@@ -371,15 +371,14 @@ const Signup = () => {
                           type="email"
                           value={confirmEmail}
                           onChange={(e) => setConfirmEmail(e.target.value)}
-                          placeholder="Confirm Email Address"
+                          placeholder="Re-enter your email address"
                           required
                           className="h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         />
                       </div>
 
                       <p className="py-2 text-center text-xs text-slate-500 leading-relaxed">
-                        Click the <span className="font-semibold text-slate-700">Send OTP</span> button below to receive
-                        the verification code in your email.
+                        Click <span className="font-semibold text-slate-700">Send OTP</span> to receive a 6-digit verification code directly in your personal email inbox.
                       </p>
 
                       <div className="pt-2 text-center">
@@ -394,8 +393,8 @@ const Signup = () => {
                     </form>
                   ) : (
                     <form onSubmit={handleVerifyOTP} className="space-y-4 max-w-md mx-auto text-left">
-                      <div className="rounded-lg bg-blue-50/70 p-3 text-xs text-blue-900 text-center border border-blue-100">
-                        We sent a verification code (OTP) to <span className="font-semibold">{email}</span>
+                      <div className="rounded-lg bg-blue-50/70 p-3 text-xs text-blue-900 text-center border border-blue-100 leading-relaxed">
+                        A 6-digit verification code has been sent to your email <span className="font-semibold">{email}</span>. Please check your inbox or spam folder.
                       </div>
 
                       <div>
@@ -417,15 +416,15 @@ const Signup = () => {
                       </div>
 
                       {devPreviewUrl && (
-                        <div className="rounded-lg bg-slate-100 p-2.5 text-center text-xs text-slate-600">
-                          (Dev Environment) Preview simulated email:{" "}
+                        <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-center text-xs text-amber-800">
+                          <strong>Note:</strong> SMTP credentials not configured on backend. Simulated test email preview:{" "}
                           <a
                             href={devPreviewUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="font-medium text-blue-600 underline"
+                            className="font-medium text-blue-700 underline"
                           >
-                            Open Preview
+                            View Email Inbox
                           </a>
                         </div>
                       )}
