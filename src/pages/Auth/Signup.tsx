@@ -107,13 +107,17 @@ const Signup = () => {
               Complete the registration steps to access digital government services.
             </p>
 
-            <ol className="mt-7 grid gap-3 sm:grid-cols-3 sm:gap-2">
+            <ol aria-label="Registration steps" className="mt-7 grid gap-3 sm:grid-cols-3 sm:gap-2">
               {progressSteps.map((label, index) => {
                 const isCompleted = isStepCompleted(index);
                 const isActive = index === activeProgressIndex;
 
                 return (
-                  <li key={label} className="flex items-center gap-2.5 sm:flex-col sm:items-start sm:gap-2">
+                  <li
+                    key={label}
+                    aria-current={isActive ? "step" : undefined}
+                    className="flex items-center gap-2.5 sm:flex-col sm:items-start sm:gap-2"
+                  >
                     <div
                       className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold ${
                         isCompleted
@@ -123,7 +127,14 @@ const Signup = () => {
                             : "border-slate-200 bg-slate-50 text-slate-400"
                       }`}
                     >
-                      {isCompleted ? <Check className="h-4 w-4" /> : index + 1}
+                      {isCompleted ? (
+                        <>
+                          <Check className="h-4 w-4" />
+                          <span className="sr-only">Completed</span>
+                        </>
+                      ) : (
+                        index + 1
+                      )}
                     </div>
                     <span
                       className={`text-xs font-medium leading-4 ${
