@@ -19,8 +19,22 @@ app.use(cookieParser());
 
 const PORT = process.env.PORT || 4000;
 
-// allow the frontend dev server to send requests with credentials
-app.use(cors({ origin: true, credentials: true }));
+// allow the frontend dev server to send requests with credentials and custom CSRF headers
+app.use(cors({
+  origin: true,
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With'],
+}));
+
+// CSRF Token endpoint
+app.get('/api/csrf-token', (req, res) => {
+  let csrfToken = req.cookies?.['csrf-token'];
+  if (!csrfToken) {
+    csrfToken = crypto.randomBytes(32).toString('hex');
+    res.cookie('csrf-token', csrfToken, { httpOnly: false, sameSite: 'lax', secure: false });
+  }
+  return res.json({ ok: true, csrfToken });
+});
 
 // ensure uploads dir exists
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
@@ -79,21 +93,30 @@ async function sendEmail(to, subject, text, html) {
   }
 
   // 2. Send via custom SMTP server if configured (e.g., Gmail, Outlook, Amazon SES, Mailgun)
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER || process.env.GMAIL_USER;
+  const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASS || process.env.GMAIL_PASS;
+  let smtpHost = process.env.SMTP_HOST || process.env.EMAIL_HOST;
+
+  // Auto-detect Gmail host if user email ends with @gmail.com or GMAIL_USER is set
+  if (!smtpHost && smtpUser && (smtpUser.includes('@gmail.com') || process.env.GMAIL_USER)) {
+    smtpHost = 'smtp.gmail.com';
+  }
+
+  if (smtpHost && smtpUser && smtpPass) {
     try {
-      const port = parseInt(process.env.SMTP_PORT || '587', 10);
+      const port = parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT || '587', 10);
       const secure = process.env.SMTP_SECURE === 'true' || port === 465;
       const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
+        host: smtpHost,
         port: port,
         secure: secure,
         auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
+          user: smtpUser,
+          pass: smtpPass,
         },
       });
 
-      const fromAddress = process.env.SMTP_FROM || process.env.EMAIL_FROM || process.env.SMTP_USER;
+      const fromAddress = process.env.SMTP_FROM || process.env.EMAIL_FROM || process.env.SENDGRID_FROM || smtpUser;
       const info = await transporter.sendMail({
         from: fromAddress,
         to,
@@ -102,7 +125,7 @@ async function sendEmail(to, subject, text, html) {
         html,
       });
 
-      console.log(`Email sent to ${to} via SMTP (${info.messageId})`);
+      console.log(`Email sent to ${to} via SMTP ${smtpHost} (${info.messageId})`);
       return { ok: true };
     } catch (err) {
       console.error('SMTP email send failed:', err);
