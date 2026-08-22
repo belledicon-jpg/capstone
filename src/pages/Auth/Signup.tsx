@@ -35,6 +35,7 @@ const Signup = () => {
       if (res?.previewUrl) {
         setDevPreviewUrl(res.previewUrl);
       }
+      setOtp("");
       setStep("verify");
     } catch (err) {
       setError(getErrorMessage(err, "Failed to send OTP"));
