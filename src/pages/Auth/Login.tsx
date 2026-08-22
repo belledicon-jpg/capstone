@@ -17,29 +17,118 @@ import { useAuth } from "@/hooks/useAuth";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, sendOTP, verifyOTP, register } = useAuth();
 
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [step, setStep] = useState<"email" | "verify" | "account">("email");
+  const [otp, setOtp] = useState("");
+  const [name, setName] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [devPreviewUrl, setDevPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<"none" | "login" | "send" | "verify" | "create">("none");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const getErrorMessage = (err: unknown, fallback: string) =>
+    err instanceof Error ? err.message : fallback;
+  const isLoading = actionLoading !== "none";
+  const safePreviewUrl = (() => {
+    if (!devPreviewUrl) return null;
+    try {
+      const url = new URL(devPreviewUrl);
+      const isHttps = url.protocol === "https:";
+      const isLocalHttp = url.protocol === "http:" && (url.hostname === "localhost" || url.hostname === "127.0.0.1");
+      return isHttps || isLocalHttp ? devPreviewUrl : null;
+    } catch {
+      return null;
+    }
+  })();
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     setError(null);
-    setLoading(true);
+    setActionLoading("login");
 
     try {
       await login(email, password);
       navigate("/");
-    } catch (err: any) {
-      setError(err.message || "Login failed");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Login failed"));
     } finally {
-      setLoading(false);
+      setActionLoading("none");
     }
+  };
+
+  const handleSend = async (e?: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault();
+    setError(null);
+    if (!email) return setError("Email required");
+    setActionLoading("send");
+    try {
+      const res = await sendOTP(email);
+      setDevPreviewUrl(res?.previewUrl ?? null);
+      setStep("verify");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to send OTP"));
+    } finally {
+      setActionLoading("none");
+    }
+  };
+
+  const handleVerify = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    setActionLoading("verify");
+    try {
+      const res = await verifyOTP(email, otp);
+      if (!res?.ok) return setError(res?.error || "Invalid or expired code");
+      setStep("account");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Verification failed"));
+    } finally {
+      setActionLoading("none");
+    }
+  };
+
+  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    if (!name || !signupPassword) return setError("Name and password required");
+    setActionLoading("create");
+    try {
+      const res = await register({ email, name, password: signupPassword, code: otp });
+      if (!res?.ok) return setError(res?.error || "Failed to create account");
+      navigate("/");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to create account"));
+    } finally {
+      setActionLoading("none");
+    }
+  };
+
+  const showSignup = () => {
+    setError(null);
+    setMode("signup");
+    setStep("email");
+    setOtp("");
+    setName("");
+    setSignupPassword("");
+    setDevPreviewUrl(null);
+    setActionLoading("none");
+  };
+
+  const showLogin = () => {
+    setError(null);
+    setMode("login");
+    setStep("email");
+    setOtp("");
+    setName("");
+    setSignupPassword("");
+    setDevPreviewUrl(null);
+    setActionLoading("none");
   };
 
   return (
@@ -83,12 +172,13 @@ const Login = () => {
                 Sign in
               </span>
 
-              <Link
-                to="/signup"
+              <button
+                type="button"
+                onClick={mode === "login" ? showSignup : showLogin}
                 className="rounded-full bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700"
               >
-                Register
-              </Link>
+                {mode === "login" ? "Register" : "Sign in"}
+              </button>
             </div>
           </div>
         </header>
@@ -150,118 +240,314 @@ const Login = () => {
             <div className="w-full max-w-[360px]">
               <ScrollReveal>
                 <div className="rounded-[18px] border border-slate-200/80 bg-white px-6 py-7 shadow-[0_10px_35px_rgba(15,23,42,0.08)] sm:px-7 sm:py-8">
-                  <div className="mb-7">
-                    <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-slate-900">
-                      Welcome back
-                    </h2>
-                    <p className="mt-2 text-[13px] text-slate-400">
-                      Sign in to access your health services.
-                    </p>
-                  </div>
-
-                  <form onSubmit={submit} className="space-y-4.5">
-                    <div>
-                      <label
-                        htmlFor="email"
-                        className="mb-2 block text-[12px] font-semibold text-slate-700"
-                      >
-                        Email
-                      </label>
-
-                      <input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="user@example.com"
-                        autoComplete="email"
-                        required
-                        className="h-10 w-full rounded-[10px] border border-slate-200 bg-white px-4 text-[13px] outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <label
-                          htmlFor="password"
-                          className="text-[12px] font-semibold text-slate-700"
-                        >
-                          Password
-                        </label>
-
-                        <Link
-                          to="/forgot-password"
-                          className="text-[11px] font-medium text-blue-600 hover:text-blue-700"
-                        >
-                          Forgot password?
-                        </Link>
+                  {mode === "login" ? (
+                    <>
+                      <div className="mb-7">
+                        <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-slate-900">
+                          Welcome back
+                        </h2>
+                        <p className="mt-2 text-[13px] text-slate-400">
+                          Sign in to access your health services.
+                        </p>
                       </div>
 
-                      <div className="relative">
-                        <input
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="mypassword"
-                          autoComplete="current-password"
-                          required
-                          className="h-10 w-full rounded-[10px] border border-slate-200 bg-white px-4 pr-11 text-[13px] outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                        />
+                      <form onSubmit={submit} className="space-y-4.5">
+                        <div>
+                          <label
+                            htmlFor="email"
+                            className="mb-2 block text-[12px] font-semibold text-slate-700"
+                          >
+                            Email
+                          </label>
+
+                          <input
+                            id="email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="user@example.com"
+                            autoComplete="email"
+                            required
+                            className="h-10 w-full rounded-[10px] border border-slate-200 bg-white px-4 text-[13px] outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          />
+                        </div>
+
+                        <div>
+                          <div className="mb-2 flex items-center justify-between gap-3">
+                            <label
+                              htmlFor="password"
+                              className="text-[12px] font-semibold text-slate-700"
+                            >
+                              Password
+                            </label>
+
+                            <Link
+                              to="/forgot-password"
+                              className="text-[11px] font-medium text-blue-600 hover:text-blue-700"
+                            >
+                              Forgot password?
+                            </Link>
+                          </div>
+
+                          <div className="relative">
+                            <input
+                              id="password"
+                              type={showPassword ? "text" : "password"}
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              placeholder="mypassword"
+                              autoComplete="current-password"
+                              required
+                              className="h-10 w-full rounded-[10px] border border-slate-200 bg-white px-4 pr-11 text-[13px] outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword((previous) => !previous)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                              aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {error && (
+                          <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-[12px] text-red-600">
+                            {error}
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="remember"
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+
+                          <label htmlFor="remember" className="text-[12px] text-slate-500">
+                            Remember me
+                          </label>
+                        </div>
 
                         <button
-                          type="button"
-                          onClick={() => setShowPassword((previous) => !previous)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
-                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          type="submit"
+                          disabled={isLoading}
+                          className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-semibold text-white shadow-[0_8px_18px_rgba(37,99,235,0.25)] transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
+                          {actionLoading === "login" ? "Signing in..." : "Sign in"}
+                          {actionLoading !== "login" && <ArrowRight className="h-4 w-4" />}
                         </button>
+                      </form>
+
+                      <div className="mt-6 text-center">
+                        <p className="text-[12px] text-slate-400">
+                          Don&apos;t have an account?{" "}
+                          <button
+                            type="button"
+                            onClick={showSignup}
+                            className="font-semibold text-blue-600 hover:text-blue-700"
+                          >
+                            Register
+                          </button>
+                        </p>
                       </div>
-                    </div>
-
-                    {error && (
-                      <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-[12px] text-red-600">
-                        {error}
+                    </>
+                  ) : (
+                    <>
+                      <div className="mb-7">
+                        <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-slate-900">
+                          Create your account
+                        </h2>
+                        <p className="mt-2 text-[13px] text-slate-400">
+                          Verify your email then complete your registration.
+                        </p>
                       </div>
-                    )}
 
-                    <div className="flex items-center gap-2">
-                      <input
-                        id="remember"
-                        type="checkbox"
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
+                      {step === "email" && (
+                        <form onSubmit={handleSend} className="space-y-4.5">
+                          <div>
+                            <label
+                              htmlFor="signup-email"
+                              className="mb-2 block text-[12px] font-semibold text-slate-700"
+                            >
+                              Email
+                            </label>
 
-                      <label htmlFor="remember" className="text-[12px] text-slate-500">
-                        Remember me
-                      </label>
-                    </div>
+                            <input
+                              id="signup-email"
+                              type="email"
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              autoComplete="email"
+                              required
+                              className="h-10 w-full rounded-[10px] border border-slate-200 bg-white px-4 text-[13px] outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
 
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-blue-600 text-[13px] font-semibold text-white shadow-[0_8px_18px_rgba(37,99,235,0.25)] transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {loading ? "Signing in..." : "Sign in"}
-                      {!loading && <ArrowRight className="h-4 w-4" />}
-                    </button>
-                  </form>
+                          {error && (
+                            <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-[12px] text-red-600">
+                              {error}
+                            </div>
+                          )}
 
-                  <div className="mt-6 text-center">
-                    <p className="text-[12px] text-slate-400">
-                      Don&apos;t have an account?{" "}
-                      <Link to="/signup" className="font-semibold text-blue-600 hover:text-blue-700">
-                        Register
-                      </Link>
-                    </p>
-                  </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <button
+                              type="button"
+                              onClick={showLogin}
+                              className="text-[12px] font-medium text-blue-600 hover:text-blue-700"
+                            >
+                              Already have an account?
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={isLoading}
+                              className="flex h-10 items-center justify-center gap-2 rounded-full bg-blue-600 px-5 text-[13px] font-semibold text-white shadow-[0_8px_18px_rgba(37,99,235,0.25)] transition hover:bg-blue-700"
+                            >
+                              {actionLoading === "send" ? "Sending..." : "Send OTP"}
+                            </button>
+                          </div>
+                        </form>
+                      )}
+
+                      {step === "verify" && (
+                        <form onSubmit={handleVerify} className="space-y-4.5">
+                          <div className="rounded-[10px] border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] text-slate-600">
+                            We sent a verification code to <span className="font-semibold text-slate-700">{email}</span>
+                          </div>
+
+                          <div>
+                            <label
+                              htmlFor="signup-otp"
+                              className="mb-2 block text-[12px] font-semibold text-slate-700"
+                            >
+                              Verification code
+                            </label>
+
+                            <input
+                              id="signup-otp"
+                              value={otp}
+                              onChange={(e) => setOtp(e.target.value)}
+                              required
+                              className="h-10 w-full rounded-[10px] border border-slate-200 bg-white px-4 text-[13px] outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
+
+                          {safePreviewUrl && (
+                            <p className="text-[11px] text-slate-500">
+                              (dev) Preview email:{" "}
+                              <a href={safePreviewUrl} target="_blank" rel="noreferrer" className="underline">
+                                Open
+                              </a>
+                            </p>
+                          )}
+
+                          {error && (
+                            <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-[12px] text-red-600">
+                              {error}
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStep("email");
+                                setDevPreviewUrl(null);
+                              }}
+                              className="text-[12px] font-medium text-blue-600 hover:text-blue-700"
+                            >
+                              Back
+                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={handleSend}
+                                disabled={isLoading}
+                                className="flex h-10 items-center justify-center rounded-full border border-slate-200 px-4 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                              >
+                                {actionLoading === "send" ? "Sending..." : "Resend"}
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="flex h-10 items-center justify-center rounded-full bg-blue-600 px-5 text-[13px] font-semibold text-white shadow-[0_8px_18px_rgba(37,99,235,0.25)] transition hover:bg-blue-700"
+                              >
+                                {actionLoading === "verify" ? "Verifying..." : "Verify"}
+                              </button>
+                            </div>
+                          </div>
+                        </form>
+                      )}
+
+                      {step === "account" && (
+                        <form onSubmit={handleCreate} className="space-y-4.5">
+                          <div>
+                            <label
+                              htmlFor="signup-name"
+                              className="mb-2 block text-[12px] font-semibold text-slate-700"
+                            >
+                              Full name
+                            </label>
+                            <input
+                              id="signup-name"
+                              value={name}
+                              onChange={(e) => setName(e.target.value)}
+                              required
+                              className="h-10 w-full rounded-[10px] border border-slate-200 bg-white px-4 text-[13px] outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
+
+                          <div>
+                            <label
+                              htmlFor="signup-password"
+                              className="mb-2 block text-[12px] font-semibold text-slate-700"
+                            >
+                              Password
+                            </label>
+                            <input
+                              id="signup-password"
+                              type="password"
+                              value={signupPassword}
+                              onChange={(e) => setSignupPassword(e.target.value)}
+                              autoComplete="new-password"
+                              required
+                              className="h-10 w-full rounded-[10px] border border-slate-200 bg-white px-4 text-[13px] outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
+
+                          {error && (
+                            <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-[12px] text-red-600">
+                              {error}
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setStep("verify")}
+                              className="text-[12px] font-medium text-blue-600 hover:text-blue-700"
+                            >
+                              Back
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={isLoading}
+                              className="flex h-10 items-center justify-center rounded-full bg-blue-600 px-5 text-[13px] font-semibold text-white shadow-[0_8px_18px_rgba(37,99,235,0.25)] transition hover:bg-blue-700"
+                            >
+                              {actionLoading === "create" ? "Creating..." : "Create account"}
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                    </>
+                  )}
 
                   <div className="mt-7 border-t border-slate-100 pt-5 text-center">
                     <p className="text-[10px] leading-5 text-slate-400">
