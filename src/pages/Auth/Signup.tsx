@@ -16,14 +16,19 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [devPreviewUrl, setDevPreviewUrl] = useState<string | null>(null);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [creatingAccount, setCreatingAccount] = useState(false);
 
   const getErrorMessage = (err: unknown, fallback: string) =>
     err instanceof Error ? err.message : fallback;
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    if (sendingOtp) return;
     setError(null);
     if (!email) return setError("Email required");
+    setSendingOtp(true);
     try {
       const res = await sendOTP(email);
       // in dev the server may return previewUrl (Ethereal)
@@ -33,31 +38,41 @@ const Signup = () => {
       setStep("verify");
     } catch (err) {
       setError(getErrorMessage(err, "Failed to send OTP"));
+    } finally {
+      setSendingOtp(false);
     }
   };
 
   const handleVerify = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    if (verifyingOtp) return;
     setError(null);
+    setVerifyingOtp(true);
     try {
       const res = await verifyOTP(email, otp);
       if (!res?.ok) return setError(res?.error || "Invalid or expired code");
       setStep("account");
     } catch (err) {
       setError(getErrorMessage(err, "Verification failed"));
+    } finally {
+      setVerifyingOtp(false);
     }
   };
 
   const handleCreate = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    if (creatingAccount) return;
     setError(null);
     if (!name || !password) return setError("Name and password required");
+    setCreatingAccount(true);
     try {
       const res = await register({ email, name, password, code: otp });
       if (!res?.ok) return setError(res?.error || "Failed to create account");
       setStep("success");
     } catch (err) {
       setError(getErrorMessage(err, "Failed to create account"));
+    } finally {
+      setCreatingAccount(false);
     }
   };
 
@@ -144,8 +159,8 @@ const Signup = () => {
                     <Link to="/login" className="text-sm font-medium text-blue-600 hover:text-blue-700">
                       Already have an account?
                     </Link>
-                    <Button type="submit" className="h-11 rounded-full px-5 text-sm font-semibold">
-                      Send OTP
+                    <Button type="submit" disabled={sendingOtp} className="h-11 rounded-full px-5 text-sm font-semibold">
+                      {sendingOtp ? "Sending..." : "Send OTP"}
                     </Button>
                   </div>
                 </form>
@@ -155,7 +170,7 @@ const Signup = () => {
                 <form onSubmit={handleVerify} className="space-y-4">
                   <div className="rounded-xl bg-white p-3">
                     <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                      Verification Email
+                      Code sent to
                     </div>
                     <div className="mt-1 text-sm font-semibold text-slate-800">{email}</div>
                   </div>
@@ -188,11 +203,17 @@ const Signup = () => {
                       Back
                     </button>
                     <div className="flex gap-2">
-                      <Button type="button" variant="outline" onClick={handleSend} className="h-10 rounded-full px-4 text-sm">
-                        Resend
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSend}
+                        disabled={sendingOtp}
+                        className="h-10 rounded-full px-4 text-sm"
+                      >
+                        {sendingOtp ? "Resending..." : "Resend"}
                       </Button>
-                      <Button type="submit" className="h-10 rounded-full px-4 text-sm font-semibold">
-                        Verify
+                      <Button type="submit" disabled={verifyingOtp} className="h-10 rounded-full px-4 text-sm font-semibold">
+                        {verifyingOtp ? "Verifying..." : "Verify"}
                       </Button>
                     </div>
                   </div>
@@ -235,8 +256,8 @@ const Signup = () => {
                     <button type="button" onClick={() => setStep("verify")} className="text-sm font-medium text-blue-600 hover:text-blue-700">
                       Back
                     </button>
-                    <Button type="submit" className="h-10 rounded-full px-5 text-sm font-semibold">
-                      Create account
+                    <Button type="submit" disabled={creatingAccount} className="h-10 rounded-full px-5 text-sm font-semibold">
+                      {creatingAccount ? "Creating..." : "Create account"}
                     </Button>
                   </div>
                 </form>
