@@ -52,7 +52,7 @@ const Login = () => {
 
               <div>
                 <h1 className="text-[13px] font-bold tracking-tight text-slate-800">
-                  GovServe
+                  GovSe
                 </h1>
               </div>
             </Link>
