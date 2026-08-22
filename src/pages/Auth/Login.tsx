@@ -55,18 +55,12 @@ const Login = () => {
 
             {/* Logo */}
             <Link to="/" className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-700">
-                <HeartPulse className="h-5 w-5 text-white" />
-              </div>
+              <img src="/logo.jpg" alt="GovServe Logo" className="h-10 w-10 object-contain rounded-full" />
 
               <div>
-                <h1 className="text-sm font-bold tracking-tight text-slate-800">
-                  HEALTH & SANITATION
+                <h1 className="text-base font-bold tracking-tight text-slate-800">
+                  GovServe
                 </h1>
-
-                <p className="text-[10px] tracking-wide text-slate-400">
-                  MANAGEMENT SYSTEM
-                </p>
               </div>
             </Link>
 
@@ -367,8 +361,7 @@ const Login = () => {
                   {/* Security note */}
                   <div className="mt-7 border-t border-slate-100 pt-5 text-center">
                     <p className="text-[10px] leading-5 text-slate-400">
-                      Your information is securely handled by the
-                      Health & Sanitation Management System.
+                      Your information is securely handled by GovServe.
                     </p>
                   </div>
 
