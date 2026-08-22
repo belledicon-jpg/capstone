@@ -142,8 +142,7 @@ app.post('/api/auth/verify-otp', (req, res) => {
   if (!rec) return res.status(400).json({ error: 'No OTP found' });
   if (Date.now() > rec.expiresAt) return res.status(400).json({ error: 'OTP expired' });
   if (rec.code !== code) return res.status(400).json({ error: 'Invalid code' });
-  // OTP verified - remove it
-  db.deleteOTP(email);
+  // OTP verified
   return res.json({ ok: true });
 });
 
