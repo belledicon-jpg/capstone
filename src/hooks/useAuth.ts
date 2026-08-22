@@ -10,7 +10,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     let mounted = true;
-    api.apiGetSession()
+    api
+      .apiGetSession()
       .then((json) => {
         if (!mounted) return;
         if (json?.user) setUser(json.user);
@@ -25,39 +26,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const sendOTP = async (email: string) => {
-    const res = await api.apiSendOTP(email);
-    return res;
+    try {
+      const res = await api.apiSendOTP(email);
+      return res;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to send OTP.";
+      return { ok: false, error: msg };
+    }
   };
 
   const verifyOTP = async (email: string, code: string) => {
-    const res = await api.apiVerifyOTP(email, code);
-    return res;
+    try {
+      const res = await api.apiVerifyOTP(email, code);
+      return res;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Verification failed.";
+      return { ok: false, error: msg };
+    }
   };
 
   const register = async ({ email, name, password, code }: any) => {
-    const res = await api.apiRegister({ email, name, password, code });
-    if (res?.ok) {
-      const s = await api.apiGetSession();
-      setUser(s.user || null);
+    try {
+      const res = await api.apiRegister({ email, name, password, code });
+      if (res?.ok) {
+        try {
+          const s = await api.apiGetSession();
+          setUser(s.user || null);
+        } catch {
+          // session fetch error ignored
+        }
+      }
+      return res;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Registration failed.";
+      return { ok: false, error: msg };
     }
-    return res;
   };
 
   const login = async (email: string, password: string) => {
-    const res = await api.apiLogin(email, password);
-    if (res?.ok) {
-      const s = await api.apiGetSession();
-      setUser(s.user || null);
+    try {
+      const res = await api.apiLogin(email, password);
+      if (res?.ok) {
+        try {
+          const s = await api.apiGetSession();
+          setUser(s.user || null);
+        } catch {
+          // session fetch error ignored
+        }
+      }
+      return res;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Login failed.";
+      return { ok: false, error: msg };
     }
-    return res;
   };
 
   const logout = async () => {
-    await api.apiLogout();
+    try {
+      await api.apiLogout();
+    } catch {
+      // logout error ignored
+    }
     setUser(null);
   };
 
-  const value = React.useMemo(() => ({ user, loading, sendOTP, verifyOTP, register, login, logout }), [user, loading]);
+  const value = React.useMemo(
+    () => ({ user, loading, sendOTP, verifyOTP, register, login, logout }),
+    [user, loading]
+  );
 
   return React.createElement(AuthContext.Provider, { value }, children) as any;
 }
@@ -66,7 +102,12 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   const ctx = React.useContext(AuthContext);
   const location = useLocation();
   if (ctx?.loading) return React.createElement("div", { className: "p-6" }, "Loading...");
-  if (!ctx?.user) return React.createElement(Navigate, { to: "/login", state: { from: location }, replace: true });
+  if (!ctx?.user)
+    return React.createElement(Navigate, {
+      to: "/login",
+      state: { from: location },
+      replace: true,
+    });
   return React.createElement(React.Fragment, null, children);
 }
 

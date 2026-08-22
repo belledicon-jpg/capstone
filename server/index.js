@@ -162,14 +162,15 @@ async function getSessionUser(req) {
 app.post('/api/auth/send-otp', async (req, res) => {
   const { email } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email required' });
+  const cleanEmail = email.trim().toLowerCase();
 
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
-  db.setOTP(email, code, expiresAt);
+  db.setOTP(cleanEmail, code, expiresAt);
 
   try {
-    const r = await sendEmail(email, 'Your GovServe verification code', `Your verification code is: ${code} (expires in 10 minutes)`, `<p>Your verification code is: <strong>${code}</strong> (expires in 10 minutes)</p>`);
-    if (!r.ok) return res.status(500).json({ error: 'Failed to send email' });
+    const r = await sendEmail(cleanEmail, 'Your GovServe verification code', `Your verification code is: ${code} (expires in 10 minutes)`, `<p>Your verification code is: <strong>${code}</strong> (expires in 10 minutes)</p>`);
+    if (!r.ok) return res.status(500).json({ error: r.error || 'Failed to send email' });
     // if nodemailer/Ethereal returned previewUrl, forward it to client for dev convenience
     return res.json({ ok: true, previewUrl: r.previewUrl || null });
   } catch (err) {
@@ -181,10 +182,13 @@ app.post('/api/auth/send-otp', async (req, res) => {
 app.post('/api/auth/verify-otp', (req, res) => {
   const { email, code } = req.body || {};
   if (!email || !code) return res.status(400).json({ error: 'Email and code required' });
-  const rec = db.getOTP(email);
-  if (!rec) return res.status(400).json({ error: 'No OTP found' });
-  if (Date.now() > rec.expiresAt) return res.status(400).json({ error: 'OTP expired' });
-  if (rec.code !== code) return res.status(400).json({ error: 'Invalid code' });
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanCode = String(code).trim();
+
+  const rec = db.getOTP(cleanEmail);
+  if (!rec) return res.status(400).json({ error: 'No OTP found for this email address.' });
+  if (Date.now() > rec.expiresAt) return res.status(400).json({ error: 'OTP code has expired. Please request a new code.' });
+  if (rec.code !== cleanCode) return res.status(400).json({ error: 'Invalid verification code.' });
   // OTP verified
   return res.json({ ok: true });
 });
@@ -192,30 +196,38 @@ app.post('/api/auth/verify-otp', (req, res) => {
 app.post('/api/auth/register', async (req, res) => {
   const { email, name, password, code } = req.body || {};
   if (!email || !name || !password || !code) return res.status(400).json({ error: 'email, name, password, code required' });
-  // verify OTP
-  const rec = db.getOTP(email);
-  if (!rec || rec.code !== code || Date.now() > rec.expiresAt) return res.status(400).json({ error: 'Invalid or expired OTP' });
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanCode = String(code).trim();
+  const cleanName = name.trim();
 
-  const existing = db.getUser(email);
-  if (existing) return res.status(400).json({ error: 'User already exists' });
+  // verify OTP
+  const rec = db.getOTP(cleanEmail);
+  if (!rec || rec.code !== cleanCode || Date.now() > rec.expiresAt) {
+    return res.status(400).json({ error: 'Invalid or expired OTP verification code.' });
+  }
+
+  const existing = db.getUser(cleanEmail);
+  if (existing) return res.status(400).json({ error: 'User with this email already exists.' });
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const user = db.createUser({ email, name, passwordHash });
-  db.deleteOTP(email);
+  const user = db.createUser({ email: cleanEmail, name: cleanName, passwordHash });
+  db.deleteOTP(cleanEmail);
 
-  setSession(res, email);
+  setSession(res, cleanEmail);
   return res.json({ ok: true, user: { email: user.email, name: user.name, avatar: user.avatar } });
 });
 
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
-  const user = db.getUser(email);
-  if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+  const cleanEmail = email.trim().toLowerCase();
+
+  const user = db.getUser(cleanEmail);
+  if (!user) return res.status(400).json({ error: 'Invalid email or password.' });
   if (!user.active) return res.status(400).json({ error: 'Account inactive' });
   const ok = await bcrypt.compare(password, user.passwordHash);
-  if (!ok) return res.status(400).json({ error: 'Invalid credentials' });
-  setSession(res, email);
+  if (!ok) return res.status(400).json({ error: 'Invalid email or password.' });
+  setSession(res, cleanEmail);
   return res.json({ ok: true, user: { email: user.email, name: user.name, avatar: user.avatar } });
 });
 
