@@ -19,7 +19,7 @@ const Profile = () => {
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
 
-  // when user changes (after login or refresh), update form
+  // when user changes (after registration or refresh), update form
   React.useEffect(() => {
     setName(user?.name ?? "");
     setAvatarPreview(user?.avatar ?? null);
