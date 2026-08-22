@@ -52,11 +52,8 @@ const Login = () => {
 
               <div>
                 <h1 className="text-[13px] font-bold tracking-tight text-slate-800">
-                  HEALTH & SANITATION
+                  GovServe
                 </h1>
-                <p className="text-[9px] tracking-[0.22em] text-slate-400">
-                  MANAGEMENT SYSTEM
-                </p>
               </div>
             </Link>
 
