@@ -19,9 +19,9 @@ app.use(cookieParser());
 
 const PORT = process.env.PORT || 4000;
 
-// allow the frontend dev server to send requests with credentials and custom CSRF headers
+// allow frontend requests with credentials + CSRF header
 app.use(cors({
-  origin: true,
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With'],
 }));
@@ -36,6 +36,35 @@ app.get('/api/csrf-token', (req, res) => {
   return res.json({ ok: true, csrfToken });
 });
 
+// CSRF protection middleware
+function isSafeMethod(method) {
+  return method === 'GET' || method === 'HEAD' || method === 'OPTIONS';
+}
+
+function requireCsrf(req, res, next) {
+  if (isSafeMethod(req.method)) return next();
+
+  // Keep auth bootstrap routes unblocked for OTP/login/register
+  const csrfExemptPaths = new Set([
+    '/api/auth/send-otp',
+    '/api/auth/verify-otp',
+    '/api/auth/register',
+    '/api/auth/login',
+  ]);
+  if (csrfExemptPaths.has(req.path)) return next();
+
+  const cookieToken = req.cookies?.['csrf-token'];
+  const headerToken = req.get('X-CSRF-Token');
+
+  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+    return res.status(403).json({ error: 'CSRF token missing or invalid' });
+  }
+  return next();
+}
+
+// Apply CSRF checks after token endpoint
+app.use(requireCsrf);
+
 // ensure uploads dir exists
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -43,7 +72,7 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 // serve uploaded files
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// Multer setup (disk storage for fallback)
+// Multer setup (disk storage fallback)
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, UPLOADS_DIR);
@@ -74,7 +103,6 @@ if (process.env.SENDGRID_API_KEY) {
 }
 
 async function sendEmail(to, subject, text, html) {
-  // 1. Send via SendGrid if configured
   if (process.env.SENDGRID_API_KEY) {
     try {
       const msg = {
@@ -92,12 +120,10 @@ async function sendEmail(to, subject, text, html) {
     }
   }
 
-  // 2. Send via custom SMTP server if configured (e.g., Gmail, Outlook, Amazon SES, Mailgun)
   const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER || process.env.GMAIL_USER;
   const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASS || process.env.GMAIL_PASS;
   let smtpHost = process.env.SMTP_HOST || process.env.EMAIL_HOST;
 
-  // Auto-detect Gmail host if user email ends with @gmail.com or GMAIL_USER is set
   if (!smtpHost && smtpUser && (smtpUser.includes('@gmail.com') || process.env.GMAIL_USER)) {
     smtpHost = 'smtp.gmail.com';
   }
@@ -133,7 +159,6 @@ async function sendEmail(to, subject, text, html) {
     }
   }
 
-  // 3. Dev Fallback: Ethereal test account with preview link
   try {
     const testAccount = await nodemailer.createTestAccount();
     const transporter = nodemailer.createTransport({
@@ -161,7 +186,7 @@ async function sendEmail(to, subject, text, html) {
 
 function setSession(res, email) {
   const id = crypto.randomBytes(24).toString('hex');
-  const expiresAt = Date.now() + 1000 * 60 * 60 * 24 * 7; // 7 days
+  const expiresAt = Date.now() + 1000 * 60 * 60 * 24 * 7;
   db.createSession(id, email, expiresAt);
   res.cookie('sessionId', id, { httpOnly: true, sameSite: 'lax', secure: false });
 }
@@ -188,13 +213,17 @@ app.post('/api/auth/send-otp', async (req, res) => {
   const cleanEmail = email.trim().toLowerCase();
 
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+  const expiresAt = Date.now() + 10 * 60 * 1000;
   db.setOTP(cleanEmail, code, expiresAt);
 
   try {
-    const r = await sendEmail(cleanEmail, 'Your GovServe verification code', `Your verification code is: ${code} (expires in 10 minutes)`, `<p>Your verification code is: <strong>${code}</strong> (expires in 10 minutes)</p>`);
+    const r = await sendEmail(
+      cleanEmail,
+      'Your GovServe verification code',
+      `Your verification code is: ${code} (expires in 10 minutes)`,
+      `<p>Your verification code is: <strong>${code}</strong> (expires in 10 minutes)</p>`
+    );
     if (!r.ok) return res.status(500).json({ error: r.error || 'Failed to send email' });
-    // if nodemailer/Ethereal returned previewUrl, forward it to client for dev convenience
     return res.json({ ok: true, previewUrl: r.previewUrl || null });
   } catch (err) {
     console.error('Failed to send email', err);
@@ -212,7 +241,7 @@ app.post('/api/auth/verify-otp', (req, res) => {
   if (!rec) return res.status(400).json({ error: 'No OTP found for this email address.' });
   if (Date.now() > rec.expiresAt) return res.status(400).json({ error: 'OTP code has expired. Please request a new code.' });
   if (rec.code !== cleanCode) return res.status(400).json({ error: 'Invalid verification code.' });
-  // OTP verified
+
   return res.json({ ok: true });
 });
 
@@ -223,7 +252,6 @@ app.post('/api/auth/register', async (req, res) => {
   const cleanCode = String(code).trim();
   const cleanName = name.trim();
 
-  // verify OTP
   const rec = db.getOTP(cleanEmail);
   if (!rec || rec.code !== cleanCode || Date.now() > rec.expiresAt) {
     return res.status(400).json({ error: 'Invalid or expired OTP verification code.' });
@@ -250,6 +278,7 @@ app.post('/api/auth/login', async (req, res) => {
   if (!user.active) return res.status(400).json({ error: 'Account inactive' });
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) return res.status(400).json({ error: 'Invalid email or password.' });
+
   setSession(res, cleanEmail);
   return res.json({ ok: true, user: { email: user.email, name: user.name, avatar: user.avatar } });
 });
@@ -287,17 +316,14 @@ app.post('/api/user/avatar', upload.single('avatar'), async (req, res) => {
   if (!sess) return res.status(401).json({ error: 'Not authenticated' });
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-  // If S3 configured, upload and return signed URL
   if (s3Client) {
     const key = `avatars/${req.file.filename}`;
     const fileStream = fs.createReadStream(req.file.path);
     const put = new PutObjectCommand({ Bucket: S3_BUCKET, Key: key, Body: fileStream, ContentType: req.file.mimetype });
     try {
       await s3Client.send(put);
-      // generate a signed GET URL
       const getCmd = new GetObjectCommand({ Bucket: S3_BUCKET, Key: key });
-      const url = await getSignedUrl(s3Client, getCmd, { expiresIn: 60 * 60 }); // 1 hour
-      // delete local file
+      const url = await getSignedUrl(s3Client, getCmd, { expiresIn: 60 * 60 });
       fs.unlinkSync(req.file.path);
       db.updateUser(sess.user.email, { avatar: url });
       return res.json({ ok: true, url });
@@ -307,7 +333,6 @@ app.post('/api/user/avatar', upload.single('avatar'), async (req, res) => {
     }
   }
 
-  // fallback: local file
   const url = `/uploads/${req.file.filename}`;
   db.updateUser(sess.user.email, { avatar: url });
   return res.json({ ok: true, url });
@@ -318,11 +343,11 @@ app.post('/api/user/password', async (req, res) => {
   if (!sess) return res.status(401).json({ error: 'Not authenticated' });
   const { currentPassword, newPassword } = req.body || {};
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'currentPassword and newPassword required' });
-  const ok = await bcrypt.compare(currentPassword, sess.user.passwordHash || sess.user.passwordHash);
-  // Note: getSessionUser returns user without passwordHash; fetch raw user
+
   const rawUser = db.getUser(sess.user.email);
-  const ok2 = await bcrypt.compare(currentPassword, rawUser.passwordHash);
-  if (!ok2) return res.status(400).json({ error: 'Current password incorrect' });
+  const ok = await bcrypt.compare(currentPassword, rawUser.passwordHash);
+  if (!ok) return res.status(400).json({ error: 'Current password incorrect' });
+
   const newHash = await bcrypt.hash(newPassword, 10);
   db.changePassword(sess.user.email, newHash);
   res.json({ ok: true });
