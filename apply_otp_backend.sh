@@ -67,21 +67,7 @@ const OTP_TTL_MS = 5 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_VERIFY_ATTEMPTS = 5;
 
-// ✅ MAG-SET NG CSRF COOKIE SA BAWAT GET REQUEST
-app.use((req, res, next) => {
-  if (req.method === "GET") {
-    const csrfToken = crypto.randomBytes(32).toString("hex");
-    res.cookie("csrf-token", csrfToken, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-    });
-  }
-  next();
-});
-
-// ✅ SESSION ENDPOINT — para mag-set ng CSRF cookie
+// ✅ SESSION ENDPOINT
 app.get("/api/auth/session", (_req, res) => {
   res.json({ ok: true, user: null });
 });
