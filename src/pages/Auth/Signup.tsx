@@ -202,7 +202,7 @@ const Signup = () => {
                         : "bg-slate-200 text-slate-500"
                     }`}
                   >
-                    {currentStep === 2 ? <Check className="h-4 w-4" /> : "2"}
+                    2
                   </div>
                   <span
                     className={`mt-2 text-xs font-medium ${

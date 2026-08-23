@@ -27,8 +27,8 @@ Files and behavior
   - PATCH /api/user { name }
   - POST /api/user/avatar (multipart form) -> stores to S3 or local and returns URL
   - POST /api/user/password { currentPassword, newPassword }
-  - POST /api/user/deactivate
-  - POST /api/user/delete
+    - POST /api/user/deactivate
+    - POST /api/user/delete
 
 Notes
 - Sessions are stored server-side in the sessions table; the cookie contains a random sessionId only.
