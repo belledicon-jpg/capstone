@@ -97,7 +97,11 @@ async function setSession(res, email) {
  const id = crypto.randomBytes(24).toString('hex');
  const expiresAt = Date.now() + 1000 * 60 * 60 * 24 * 7;
  await db.createSession(id, email, expiresAt);
- res.cookie('sessionId', id, { httpOnly: true, sameSite: 'lax', secure: false });
+ res.cookie('sessionId', id, {
+   httpOnly: true,
+   sameSite: 'lax',
+   secure: process.env.NODE_ENV === 'production',
+ });
 }
 
 async function clearSession(res, req) {
