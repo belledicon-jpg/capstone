@@ -51,50 +51,6 @@ async function request<T extends ApiResponse>(
 }
 
 /* =========================================================
-   SEND OTP
-========================================================= */
-
-export async function apiSendOTP(email: string) {
-  const cleanEmail = email.trim().toLowerCase();
-
-  if (!cleanEmail) {
-    throw new Error("Please enter your email address.");
-  }
-
-  return request<ApiResponse>("/api/auth/send-otp", {
-    method: "POST",
-    body: JSON.stringify({
-      email: cleanEmail,
-    }),
-  });
-}
-
-/* =========================================================
-   VERIFY OTP
-========================================================= */
-
-export async function apiVerifyOTP(email: string, code: string) {
-  const cleanEmail = email.trim().toLowerCase();
-  const cleanCode = code.trim();
-
-  if (!cleanEmail) {
-    throw new Error("Email address is required.");
-  }
-
-  if (!/^\d{6}$/.test(cleanCode)) {
-    throw new Error("Please enter the 6-digit verification code.");
-  }
-
-  return request<ApiResponse>("/api/auth/verify-otp", {
-    method: "POST",
-    body: JSON.stringify({
-      email: cleanEmail,
-      code: cleanCode,
-    }),
-  });
-}
-
-/* =========================================================
    REGISTER
 ========================================================= */
 
@@ -102,7 +58,6 @@ export async function apiRegister(payload: {
   email: string;
   name: string;
   password: string;
-  code: string;
 }) {
   return request<ApiResponse>("/api/auth/register", {
     method: "POST",
@@ -110,7 +65,6 @@ export async function apiRegister(payload: {
       email: payload.email.trim().toLowerCase(),
       name: payload.name.trim(),
       password: payload.password,
-      code: payload.code.trim(),
     }),
   });
 }

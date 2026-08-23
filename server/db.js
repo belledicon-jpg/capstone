@@ -52,13 +52,6 @@ if (needInit) {
       )
     `);
     db.run(`
-      CREATE TABLE otps (
-        email TEXT PRIMARY KEY,
-        code TEXT,
-        expiresAt INTEGER
-      )
-    `);
-    db.run(`
       CREATE TABLE sessions (
         id TEXT PRIMARY KEY,
         email TEXT,
@@ -93,20 +86,7 @@ module.exports = {
 
   async deleteUser(email) {
     await run('DELETE FROM users WHERE email = ?', [email]);
-    await run('DELETE FROM otps WHERE email = ?', [email]);
     await run('DELETE FROM sessions WHERE email = ?', [email]);
-  },
-
-  async setOTP(email, code, expiresAt) {
-    await run('INSERT OR REPLACE INTO otps (email, code, expiresAt) VALUES (?, ?, ?)', [email, code, expiresAt]);
-  },
-
-  async getOTP(email) {
-    return get('SELECT email, code, expiresAt FROM otps WHERE email = ?', [email]);
-  },
-
-  async deleteOTP(email) {
-    await run('DELETE FROM otps WHERE email = ?', [email]);
   },
 
   async changePassword(email, newHash) {

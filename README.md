@@ -90,7 +90,7 @@ With this config in place:
 
 ## Features
 
-- **Authentication**: OTP-based signup/login with email verification
+- **Authentication**: Direct signup/login with server-side sessions
 - **Profile Management**: Edit name, upload avatar, change password
 - **Session Management**: Server-side sessions with secure HTTP-only cookies
 - **Account Actions**: Deactivate or delete account
@@ -100,8 +100,6 @@ With this config in place:
 ## API
 
 ### Authentication Endpoints
-- `POST /api/auth/send-otp` - Send OTP to email
-- `POST /api/auth/verify-otp` - Verify OTP code
 - `POST /api/auth/register` - Register new account
 - `POST /api/auth/login` - Login with email/password
 - `POST /api/auth/logout` - Logout and clear session
@@ -233,7 +231,7 @@ This project is developed for educational/demo purposes. Before using in product
 - [ ] Replace SQLite with a managed DB (Postgres/MySQL)
 - [ ] Set cookie `secure=true` and serve over HTTPS only
 - [ ] Add rate-limiting on auth endpoints
-- [ ] Add CAPTCHA to OTP/login flows
+- [ ] Add CAPTCHA to signup/login flows
 - [ ] Validate and sanitize all user inputs
 - [ ] Scan uploaded files for malware
 - [ ] Use S3 or object storage for avatar uploads
