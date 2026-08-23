@@ -1,25 +1,17 @@
-cd server
-
-# 1) Install deps
-npm i express cors dotenv bcryptjs jsonwebtoken nodemailer
-npm i -D @types/express @types/cors @types/jsonwebtoken @types/nodemailer ts-node-dev typescript
-
-# 2) Create src folder if missing
-mkdir -p src
-
-# 3) Write server/src/index.ts
-cat > src/index.ts << 'EOF'
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
+import cookieParser from "cookie-parser";
+import crypto from "crypto";
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+app.use(cookieParser());
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "*",
@@ -75,11 +67,31 @@ const OTP_TTL_MS = 5 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_VERIFY_ATTEMPTS = 5;
 
+// ✅ MAG-SET NG CSRF COOKIE SA BAWAT GET REQUEST
+app.use((req, res, next) => {
+  if (req.method === "GET") {
+    const csrfToken = crypto.randomBytes(32).toString("hex");
+    res.cookie("csrf-token", csrfToken, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+  }
+  next();
+});
+
+// ✅ SESSION ENDPOINT — para mag-set ng CSRF cookie
+app.get("/api/auth/session", (_req, res) => {
+  res.json({ ok: true, user: null });
+});
+
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.post("/auth/send-otp", async (req, res) => {
+// ✅ LAHAT NG ROUTES MAY /api SA UNAHAN
+app.post("/api/auth/send-otp", async (req, res) => {
   try {
     const emailRaw = (req.body?.email || "").toString().trim().toLowerCase();
     if (!isEmailValid(emailRaw)) {
@@ -118,7 +130,7 @@ app.post("/auth/send-otp", async (req, res) => {
   }
 });
 
-app.post("/auth/verify-otp", async (req, res) => {
+app.post("/api/auth/verify-otp", async (req, res) => {
   try {
     const emailRaw = (req.body?.email || "").toString().trim().toLowerCase();
     const code = (req.body?.code || "").toString().trim();
@@ -155,7 +167,7 @@ app.post("/auth/verify-otp", async (req, res) => {
   }
 });
 
-app.post("/auth/register", async (req, res) => {
+app.post("/api/auth/register", async (req, res) => {
   try {
     const emailRaw = (req.body?.email || "").toString().trim().toLowerCase();
     const name = (req.body?.name || "").toString().trim();
@@ -187,7 +199,7 @@ app.post("/auth/register", async (req, res) => {
   }
 });
 
-app.post("/auth/login", async (req, res) => {
+app.post("/api/auth/login", async (req, res) => {
   try {
     const emailRaw = (req.body?.email || "").toString().trim().toLowerCase();
     const password = (req.body?.password || "").toString();
@@ -208,29 +220,3 @@ app.post("/auth/login", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
-EOF
-
-# 4) Create .env.example
-cat > .env.example << 'EOF'
-PORT=5000
-CLIENT_URL=http://localhost:5173
-JWT_SECRET=change_this_super_secret
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_app_password
-SMTP_FROM="Capstone OTP <your_email@gmail.com>"
-EOF
-
-# 5) Ensure package.json has dev script
-node -e '
-const fs=require("fs");
-const p="package.json";
-const j=JSON.parse(fs.readFileSync(p,"utf8"));
-j.scripts=j.scripts||{};
-if(!j.scripts.dev) j.scripts.dev="ts-node-dev --respawn --transpile-only src/index.ts";
-fs.writeFileSync(p, JSON.stringify(j,null,2));
-console.log("updated package.json scripts.dev");
-'
-
-echo "Done. Next: copy .env.example -> .env, fill SMTP values, then run: npm run dev"
