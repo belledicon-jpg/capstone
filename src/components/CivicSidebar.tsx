@@ -14,6 +14,7 @@ import {
 import { Link, useLocation } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
+import govServeLogo from '@/assets/logo.png';
 
 type CivicSidebarProps = {
   open: boolean;
@@ -106,7 +107,13 @@ export const CivicSidebar = ({
       >
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded bg-white/10 flex items-center justify-center">GS</div>
+            <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+            <img
+              src={govServeLogo}
+              alt="GovServe Logo"
+              className="w-full h-full object-contain p-0.5"
+            />
+            </div>
             {!collapsed && <span className="font-semibold">GovServe</span>}
           </Link>
 
