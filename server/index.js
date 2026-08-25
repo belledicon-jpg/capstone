@@ -1,9 +1,9 @@
 const express = require('express');
+const cors = require('cors');
 const sgMail = require('@sendgrid/mail');
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
-const cors = require('cors');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -17,11 +17,21 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT || '587', 10),
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
 const PORT = process.env.PORT || 4000;
 
 // allow frontend requests with credentials + CSRF header
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: process.env.CLIENT_URL || 'http://localhost:8081',
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With'],
 }));
@@ -207,14 +217,40 @@ async function getSessionUser(req) {
   return { sessionId: sid, user };
 }
 
+// app.post('/api/auth/send-otp', async (req, res) => {
+//   const { email } = req.body || {};
+//   if (!email) return res.status(400).json({ error: 'Email required' });
+//   const cleanEmail = email.trim().toLowerCase();
+
+//   const code = Math.floor(100000 + Math.random() * 900000).toString();
+//   const expiresAt = Date.now() + 10 * 60 * 1000;
+//   db.setOTP(cleanEmail, code, expiresAt);
+
+//   try {
+//     const r = await sendEmail(
+//       cleanEmail,
+//       'Your GovServe verification code',
+//       `Your verification code is: ${code} (expires in 10 minutes)`,
+//       `<p>Your verification code is: <strong>${code}</strong> (expires in 10 minutes)</p>`
+//     );
+//     if (!r.ok) return res.status(500).json({ error: r.error || 'Failed to send email' });
+//     return res.json({ ok: true, previewUrl: r.previewUrl || null });
+//   } catch (err) {
+//     console.error('Failed to send email', err);
+//     return res.status(500).json({ error: 'Failed to send email' });
+//   }
+// });
+
 app.post('/api/auth/send-otp', async (req, res) => {
   const { email } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email required' });
   const cleanEmail = email.trim().toLowerCase();
 
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = Date.now() + 10 * 60 * 1000;
-  db.setOTP(cleanEmail, code, expiresAt);
+  const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
+
+  // Save the OTP using your db helper module instead of raw supabase
+  await db.setOTP(cleanEmail, code, expiresAt);
 
   try {
     const r = await sendEmail(
@@ -231,16 +267,28 @@ app.post('/api/auth/send-otp', async (req, res) => {
   }
 });
 
-app.post('/api/auth/verify-otp', (req, res) => {
+// Add async here --------------------v
+app.post('/api/auth/verify-otp', async (req, res) => {
   const { email, code } = req.body || {};
   if (!email || !code) return res.status(400).json({ error: 'Email and code required' });
+
   const cleanEmail = email.trim().toLowerCase();
   const cleanCode = String(code).trim();
 
-  const rec = db.getOTP(cleanEmail);
-  if (!rec) return res.status(400).json({ error: 'No OTP found for this email address.' });
-  if (Date.now() > rec.expiresAt) return res.status(400).json({ error: 'OTP code has expired. Please request a new code.' });
-  if (rec.code !== cleanCode) return res.status(400).json({ error: 'Invalid verification code.' });
+  // Add await here ------------------v
+  const rec = await db.getOTP(cleanEmail);
+
+  if (!rec) {
+    return res.status(400).json({ error: 'No OTP found for this email address.' });
+  }
+
+  if (Date.now() > rec.expiresAt) {
+    return res.status(400).json({ error: 'OTP code has expired. Please request a new code.' });
+  }
+
+  if (rec.code !== cleanCode) {
+    return res.status(400).json({ error: 'Invalid verification code.' });
+  }
 
   return res.json({ ok: true });
 });
@@ -252,17 +300,18 @@ app.post('/api/auth/register', async (req, res) => {
   const cleanCode = String(code).trim();
   const cleanName = name.trim();
 
-  const rec = db.getOTP(cleanEmail);
+  const rec = await db.getOTP(cleanEmail);
   if (!rec || rec.code !== cleanCode || Date.now() > rec.expiresAt) {
     return res.status(400).json({ error: 'Invalid or expired OTP verification code.' });
   }
 
-  const existing = db.getUser(cleanEmail);
+  const existing = await db.getUser(cleanEmail);
   if (existing) return res.status(400).json({ error: 'User with this email already exists.' });
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const user = db.createUser({ email: cleanEmail, name: cleanName, passwordHash });
-  db.deleteOTP(cleanEmail);
+  
+  const user = await db.createUser({ email: cleanEmail, name: cleanName, passwordHash });
+  await db.deleteOTP(cleanEmail);
 
   setSession(res, cleanEmail);
   return res.json({ ok: true, user: { email: user.email, name: user.name, avatar: user.avatar } });
@@ -371,4 +420,22 @@ app.post('/api/user/delete', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Auth dev server listening on http://localhost:${PORT}`);
+});
+
+
+// ======================================================================================================
+// ======================================================================================================
+// ======================================================================================================
+const { createClient } = require('@supabase/supabase-js');
+
+const supabaseUrl = process.env.SUPABASE_URL; // https://supa.eprovider.site
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Your service_role key
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Example: Querying or inserting data from your Express routes
+app.get('/api/items', async (req, res) => {
+  const { data, error } = await supabase.from('your_table_name').select('*');
+  if (error) return res.status(500).json({ error: error.message });
+  return res.json({ ok: true, data });
 });

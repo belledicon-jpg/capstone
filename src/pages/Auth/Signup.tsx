@@ -125,7 +125,7 @@ const Signup = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center gap-3">
               <img
-                src="/logo.jpg"
+                src="/assets/logo.jpg"
                 alt="GovServe Logo"
                 className="h-10 w-10 object-contain rounded-full"
               />

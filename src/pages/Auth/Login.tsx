@@ -55,7 +55,7 @@ const Login = () => {
  
             {/* Logo */} 
             <Link to="/" className="flex items-center gap-3"> 
-              <img src="/logo.jpg" alt="GovServe Logo" className="h-10 w-10 object-contain rounded-full" /> 
+              <img src="/assets//logo.jpg" alt="GovServe Logo" className="h-10 w-10 object-contain rounded-full" /> 
  
               <div> 
                 <h1 className="text-base font-bold tracking-tight text-slate-800"> 
@@ -302,7 +302,7 @@ const Login = () => {
  
                     {/* Error */} 
                     {error && ( 
-                      <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2.5 text-xs text-red-600"> 
+                      <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2.5 text-xs text-red-600 "> 
                         {error} 
                       </div> 
                     )} 
