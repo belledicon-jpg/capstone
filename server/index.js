@@ -29,51 +29,12 @@ const transporter = nodemailer.createTransport({
 
 const PORT = process.env.PORT || 4000;
 
-// allow frontend requests with credentials + CSRF header
+// allow frontend requests with credentials
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:8081',
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
-
-// CSRF Token endpoint
-app.get('/api/csrf-token', (req, res) => {
-  let csrfToken = req.cookies?.['csrf-token'];
-  if (!csrfToken) {
-    csrfToken = crypto.randomBytes(32).toString('hex');
-    res.cookie('csrf-token', csrfToken, { httpOnly: false, sameSite: 'lax', secure: false });
-  }
-  return res.json({ ok: true, csrfToken });
-});
-
-// CSRF protection middleware
-function isSafeMethod(method) {
-  return method === 'GET' || method === 'HEAD' || method === 'OPTIONS';
-}
-
-function requireCsrf(req, res, next) {
-  if (isSafeMethod(req.method)) return next();
-
-  // Keep auth bootstrap routes unblocked for OTP/login/register
-  const csrfExemptPaths = new Set([
-    '/api/auth/send-otp',
-    '/api/auth/verify-otp',
-    '/api/auth/register',
-    '/api/auth/login',
-  ]);
-  if (csrfExemptPaths.has(req.path)) return next();
-
-  const cookieToken = req.cookies?.['csrf-token'];
-  const headerToken = req.get('X-CSRF-Token');
-
-  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
-    return res.status(403).json({ error: 'CSRF token missing or invalid' });
-  }
-  return next();
-}
-
-// Apply CSRF checks after token endpoint
-app.use(requireCsrf);
 
 // ensure uploads dir exists
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
