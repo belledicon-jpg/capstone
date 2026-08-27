@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 
+import { QCEservicesHero } from "@/components/QCEservicesHero";
 import {
   PageTransition,
   ScrollReveal,
@@ -169,6 +170,9 @@ const Index = () => {
   return (
     <PageTransition>
       <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        {/* QC eServices Hero Section */}
+        <QCEservicesHero />
+
         <section className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="mb-1 text-sm font-semibold text-blue-600">Municipal operations</p>
