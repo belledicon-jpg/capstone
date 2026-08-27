@@ -2,6 +2,7 @@ import {
   BarChart3,
   Building2,
   ClipboardCheck,
+  CreditCard,
   FileBarChart,
   HelpCircle,
   LayoutDashboard,
@@ -33,7 +34,8 @@ const primaryLinks = [
 ];
 
 const secondaryLinks = [
-  { label: "Settings", icon: Settings, to: "/#settings" },
+  { label: "Subscription & Billing", icon: CreditCard, to: "/subscription" },
+  { label: "Settings", icon: Settings, to: "/settings" },
   { label: "Help center", icon: HelpCircle, to: "/#help" },
 ];
 
