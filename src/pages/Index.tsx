@@ -25,6 +25,7 @@ import {
 } from "@/components/animations";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { SubscriptionBilling } from "@/components/SubscriptionBilling";
 import {
   Table,
   TableBody,
@@ -333,6 +334,12 @@ const Index = () => {
                 ))}
               </div>
             </article>
+          </section>
+        </ScrollReveal>
+
+        <ScrollReveal delay={50}>
+          <section id="subscription" className="mb-6">
+            <SubscriptionBilling />
           </section>
         </ScrollReveal>
 
